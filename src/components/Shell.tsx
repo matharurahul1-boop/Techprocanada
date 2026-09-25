@@ -17,6 +17,7 @@ import {
   Tags,
   Users,
   TriangleAlert,
+  Wrench,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
@@ -30,6 +31,7 @@ import {
 import techProLogo from "@/assets/techpro-logo.png.asset.json";
 import { clearNotifications, markNotificationsRead, useStore } from "@/lib/store";
 import { useAuth } from "@/hooks/use-auth";
+import { usePushNotifications } from "@/hooks/use-push";
 
 const navItems = [
   { to: "/", long: "Dashboard", short: "Home", icon: LayoutDashboard },
@@ -40,6 +42,7 @@ const navItems = [
   { to: "/inventory-items", long: "Inventory Items", short: "Items", icon: PackageSearch },
   { to: "/tools-order-log", long: "Tools Order Log", short: "Orders", icon: ShoppingCart },
   { to: "/tool-assigned-log", long: "Tool Assigned Log", short: "Log", icon: ClipboardList },
+  { to: "/machine-hours", long: "Machining Hours", short: "Machining", icon: Wrench },
   {
     to: "/timeliness-configuration",
     long: "Timeliness Configuration",
@@ -49,7 +52,14 @@ const navItems = [
 ] as const;
 
 const mobileDockItems = [navItems[0], navItems[1], navItems[5], navItems[6]] as const;
-const mobileMoreItems = [navItems[2], navItems[3], navItems[4], navItems[7], navItems[8]] as const;
+const mobileMoreItems = [
+  navItems[2],
+  navItems[3],
+  navItems[4],
+  navItems[7],
+  navItems[8],
+  navItems[9],
+] as const;
 
 export function Shell({
   eyebrow,
@@ -66,6 +76,7 @@ export function Shell({
   const [isMenuExpanded, setIsMenuExpanded] = useState(true);
   const { notifications } = useStore();
   const { user, signOut } = useAuth();
+  const push = usePushNotifications();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const isMoreActive = mobileMoreItems.some((item) => pathname === item.to);
   const unreadCount = notifications.filter((notification) => !notification.read).length;
@@ -103,7 +114,9 @@ export function Shell({
           <aside
             className={`left-menu-glass sticky top-3 z-20 mx-3 mt-3 hidden shrink-0 overflow-hidden rounded-2xl border transition-[width] duration-300 lg:top-4 lg:my-4 lg:ml-4 lg:mr-0 lg:flex lg:h-[calc(100vh-2rem)] lg:flex-col ${isMenuExpanded ? "lg:w-60" : "lg:w-[76px]"}`}
           >
-            <div className={`hidden h-16 items-center gap-2.5 lg:flex ${isMenuExpanded ? "px-4" : "justify-center px-2"}`}>
+            <div
+              className={`hidden h-16 items-center gap-2.5 lg:flex ${isMenuExpanded ? "px-4" : "justify-center px-2"}`}
+            >
               {isMenuExpanded ? (
                 <img
                   src={techProLogo.url}
@@ -120,7 +133,11 @@ export function Shell({
                 aria-label={isMenuExpanded ? "Minimise menu" : "Expand menu"}
                 title={isMenuExpanded ? "Minimise menu" : "Expand menu"}
               >
-                {isMenuExpanded ? <PanelLeftClose aria-hidden="true" /> : <PanelLeftOpen aria-hidden="true" />}
+                {isMenuExpanded ? (
+                  <PanelLeftClose aria-hidden="true" />
+                ) : (
+                  <PanelLeftOpen aria-hidden="true" />
+                )}
               </Button>
             </div>
 
@@ -146,7 +163,9 @@ export function Shell({
               })}
             </nav>
 
-            <div className={`mt-auto hidden border-t border-line/60 py-4 lg:block ${isMenuExpanded ? "px-5" : "px-2 text-center"}`}>
+            <div
+              className={`mt-auto hidden border-t border-line/60 py-4 lg:block ${isMenuExpanded ? "px-5" : "px-2 text-center"}`}
+            >
               <p className="font-mono text-[11px] text-muted-fg">Warehouse · Toronto</p>
             </div>
           </aside>
@@ -190,19 +209,44 @@ export function Shell({
                       <div className="flex items-center justify-between border-b border-line px-4 py-3">
                         <div>
                           <p className="text-sm font-bold text-ink">Stock notifications</p>
-                          <p className="text-[11px] text-muted-fg">Frontend preview</p>
+                          <p className="text-[11px] text-muted-fg">In-app + push alerts</p>
                         </div>
                         {notifications.length > 0 && (
-                          <Button type="button" variant="ghost" size="sm" onClick={clearNotifications} className="text-muted-fg hover:text-ink">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={clearNotifications}
+                            className="text-muted-fg hover:text-ink"
+                          >
                             Clear
                           </Button>
                         )}
                       </div>
+                      {push.supported && (
+                        <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5">
+                          <span className="text-[12px] text-muted-fg">
+                            Push alerts on this device
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={push.busy}
+                            onClick={() => void (push.enabled ? push.disable() : push.enable())}
+                            className={`h-7 rounded-full px-3 text-[11px] font-semibold ${push.enabled ? "bg-good-soft text-good" : "bg-chip text-ink hover:bg-accent-brand hover:text-accent-brand-ink"}`}
+                          >
+                            {push.busy ? "…" : push.enabled ? "On" : "Enable"}
+                          </Button>
+                        </div>
+                      )}
                       {notifications.length === 0 ? (
                         <div className="px-5 py-8 text-center">
                           <Bell className="mx-auto mb-2 size-5 text-muted-fg" aria-hidden="true" />
                           <p className="text-sm font-semibold text-ink">No stock alerts yet</p>
-                          <p className="mt-1 text-[11px] text-muted-fg">Alerts appear when a balance reaches or drops below its threshold.</p>
+                          <p className="mt-1 text-[11px] text-muted-fg">
+                            Alerts appear when a balance reaches or drops below its threshold.
+                          </p>
                         </div>
                       ) : (
                         <div className="max-h-80 overflow-y-auto p-1.5">
@@ -210,19 +254,32 @@ export function Shell({
                             <DropdownMenuItem key={notification.id} asChild>
                               <Link
                                 to="/inventory-items"
-                                search={{ balance: notification.level === "critical" ? "below" : "threshold" }}
+                                search={{
+                                  balance:
+                                    notification.level === "critical" ? "below" : "threshold",
+                                }}
                                 className="flex cursor-pointer items-start gap-3 rounded-lg px-3 py-3 focus:bg-panel/70"
                               >
-                                <span className={`mt-0.5 grid size-8 shrink-0 place-items-center rounded-full ${notification.level === "critical" ? "bg-destructive/15 text-destructive" : "bg-warn-soft text-warn"}`}>
+                                <span
+                                  className={`mt-0.5 grid size-8 shrink-0 place-items-center rounded-full ${notification.level === "critical" ? "bg-destructive/15 text-destructive" : "bg-warn-soft text-warn"}`}
+                                >
                                   <TriangleAlert className="size-4" aria-hidden="true" />
                                 </span>
                                 <span className="min-w-0 flex-1">
-                                  <span className="block truncate text-[13px] font-bold text-ink">{notification.itemName}</span>
+                                  <span className="block truncate text-[13px] font-bold text-ink">
+                                    {notification.itemName}
+                                  </span>
                                   <span className="block text-[11px] leading-5 text-muted-fg">
-                                    {notification.level === "critical" ? "Below threshold" : "Threshold reached"} · Balance {notification.balance} / Threshold {notification.threshold}
+                                    {notification.level === "critical"
+                                      ? "Below threshold"
+                                      : "Threshold reached"}{" "}
+                                    · Balance {notification.balance} / Threshold{" "}
+                                    {notification.threshold}
                                   </span>
                                 </span>
-                                <span className="shrink-0 font-mono text-[9px] text-muted-fg">{formatNotificationTime(notification.createdAt)}</span>
+                                <span className="shrink-0 font-mono text-[9px] text-muted-fg">
+                                  {formatNotificationTime(notification.createdAt)}
+                                </span>
                               </Link>
                             </DropdownMenuItem>
                           ))}
@@ -252,9 +309,18 @@ export function Shell({
                         {(user?.email?.[0] ?? "T").toUpperCase()}
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" sideOffset={10} className="glass-surface w-56 rounded-xl border">
-                      <div className="truncate px-3 py-2 text-[11px] text-muted-fg">{user?.email}</div>
-                      <DropdownMenuItem onClick={() => void signOut()} className="cursor-pointer gap-2 text-destructive focus:text-destructive">
+                    <DropdownMenuContent
+                      align="end"
+                      sideOffset={10}
+                      className="glass-surface w-56 rounded-xl border"
+                    >
+                      <div className="truncate px-3 py-2 text-[11px] text-muted-fg">
+                        {user?.email}
+                      </div>
+                      <DropdownMenuItem
+                        onClick={() => void signOut()}
+                        className="cursor-pointer gap-2 text-destructive focus:text-destructive"
+                      >
                         <LogOut className="size-4" aria-hidden="true" />
                         Sign out
                       </DropdownMenuItem>
@@ -264,7 +330,6 @@ export function Shell({
                 </div>
               </header>
             </div>
-
 
             {children}
           </main>
@@ -292,9 +357,15 @@ export function Shell({
                         : "size-8 rounded-xl"
                     }`}
                   >
-                    <Icon className={isInventory ? "size-5" : "size-[18px]"} strokeWidth={2} aria-hidden="true" />
+                    <Icon
+                      className={isInventory ? "size-5" : "size-[18px]"}
+                      strokeWidth={2}
+                      aria-hidden="true"
+                    />
                   </span>
-                  <span className="max-w-full truncate">{isInventory ? "Inventory" : item.short}</span>
+                  <span className="max-w-full truncate">
+                    {isInventory ? "Inventory" : item.short}
+                  </span>
                 </Link>
               );
             })}

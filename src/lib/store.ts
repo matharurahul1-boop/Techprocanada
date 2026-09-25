@@ -3,6 +3,7 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesUpdate } from "@/integrations/supabase/types";
+import { notifyLowStock } from "@/lib/push/actions.functions";
 
 export type ToolType = { id: string; name: string };
 
@@ -20,6 +21,18 @@ export type InventoryItem = {
 export type Brand = { id: string; name: string };
 
 export type Company = { id: string; name: string };
+
+export type Machine = { id: string; name: string };
+
+export type MachineHour = {
+  id: string;
+  machineId: string;
+  operatorId: string;
+  workDate: string;
+  hours: number;
+  jobNumber: string;
+  notes: string;
+};
 
 export type TimelinessConfiguration = {
   id: string;
@@ -72,9 +85,11 @@ type State = {
   items: InventoryItem[];
   brands: Brand[];
   companies: Company[];
+  machines: Machine[];
   orders: ToolOrder[];
   users: User[];
   assignments: ToolAssignment[];
+  machineHours: MachineHour[];
   notifications: StockNotification[];
   timelinessConfigurations: TimelinessConfiguration[];
 };
@@ -86,9 +101,11 @@ const empty: State = {
   items: [],
   brands: [],
   companies: [],
+  machines: [],
   orders: [],
   users: [],
   assignments: [],
+  machineHours: [],
   notifications: [],
   timelinessConfigurations: [],
 };
@@ -156,6 +173,18 @@ const mapAssignment = (r: Tables<"inventory_assigned">): ToolAssignment => ({
   drawingNumber: r.drawing_number ?? "",
 });
 
+const mapMachine = (r: Tables<"machines">): Machine => ({ id: String(r.id), name: r.name });
+
+const mapMachineHour = (r: Tables<"machine_hours">): MachineHour => ({
+  id: String(r.id),
+  machineId: r.machine_id != null ? String(r.machine_id) : "",
+  operatorId: r.operator_id != null ? String(r.operator_id) : "",
+  workDate: r.work_date,
+  hours: r.hours,
+  jobNumber: r.job_number ?? "",
+  notes: r.notes ?? "",
+});
+
 const REPORT_TABLES: TimelinessConfiguration["reportTable"][] = [
   "Inventory Assigned",
   "Inventory Orders",
@@ -189,20 +218,42 @@ const mapTimeliness = (r: Tables<"timeliness_configurations">): TimelinessConfig
 });
 
 async function loadAll() {
-  const [toolTypes, brands, companies, users, items, orders, assignments, timeliness] = await Promise.all([
+  const [
+    toolTypes,
+    brands,
+    companies,
+    machines,
+    users,
+    items,
+    orders,
+    assignments,
+    machineHours,
+    timeliness,
+  ] = await Promise.all([
     supabase.from("tool_types").select("*").order("name"),
     supabase.from("brands").select("*").order("name"),
     supabase.from("companies").select("*").order("name"),
+    supabase.from("machines").select("*").order("name"),
     supabase.from("app_users").select("*").order("name"),
     supabase.from("inventory_items").select("*").order("name"),
     supabase.from("inventory_orders").select("*").order("purchase_date", { ascending: false }),
     supabase.from("inventory_assigned").select("*").order("issued_date", { ascending: false }),
+    supabase.from("machine_hours").select("*").order("work_date", { ascending: false }),
     supabase.from("timeliness_configurations").select("*"),
   ]);
 
-  const firstError = [toolTypes, brands, companies, users, items, orders, assignments, timeliness].find(
-    (r) => r.error,
-  )?.error;
+  const firstError = [
+    toolTypes,
+    brands,
+    companies,
+    machines,
+    users,
+    items,
+    orders,
+    assignments,
+    machineHours,
+    timeliness,
+  ].find((r) => r.error)?.error;
   if (firstError) {
     console.error("[store] initial Supabase load failed:", firstError.message);
     toast.error(`Could not load data from Supabase: ${firstError.message}`);
@@ -214,10 +265,12 @@ async function loadAll() {
     toolTypes: (toolTypes.data ?? []).map(mapToolType),
     brands: (brands.data ?? []).map(mapBrand),
     companies: (companies.data ?? []).map(mapCompany),
+    machines: (machines.data ?? []).map(mapMachine),
     users: (users.data ?? []).map(mapUser),
     items: (items.data ?? []).map(mapItem),
     orders: (orders.data ?? []).map(mapOrder),
     assignments: (assignments.data ?? []).map(mapAssignment),
+    machineHours: (machineHours.data ?? []).map(mapMachineHour),
     timelinessConfigurations: (timeliness.data ?? []).map(mapTimeliness),
   };
   persist();
@@ -266,7 +319,11 @@ export function addToolType(name: string) {
   persist();
   emit();
   void (async () => {
-    const { data, error } = await supabase.from("tool_types").insert({ name }).select("id").single();
+    const { data, error } = await supabase
+      .from("tool_types")
+      .insert({ name })
+      .select("id")
+      .single();
     if (error) return reportError("Add tool type", error);
     state = {
       ...state,
@@ -328,7 +385,10 @@ export function addItem(item: Omit<InventoryItem, "id">) {
       .select("id")
       .single();
     if (error) return reportError("Add item", error);
-    state = { ...state, items: state.items.map((i) => (i.id === tempId ? { ...i, id: String(data.id) } : i)) };
+    state = {
+      ...state,
+      items: state.items.map((i) => (i.id === tempId ? { ...i, id: String(data.id) } : i)),
+    };
     persist();
     emit();
   })();
@@ -377,7 +437,10 @@ export function addBrand(name: string) {
   void (async () => {
     const { data, error } = await supabase.from("brands").insert({ name }).select("id").single();
     if (error) return reportError("Add brand", error);
-    state = { ...state, brands: state.brands.map((b) => (b.id === tempId ? { ...b, id: String(data.id) } : b)) };
+    state = {
+      ...state,
+      brands: state.brands.map((b) => (b.id === tempId ? { ...b, id: String(data.id) } : b)),
+    };
     persist();
     emit();
   })();
@@ -430,7 +493,9 @@ export function addCompany(name: string) {
 export function updateCompany(id: string, name: string) {
   state = {
     ...state,
-    companies: state.companies.map((company) => (company.id === id ? { ...company, name } : company)),
+    companies: state.companies.map((company) =>
+      company.id === id ? { ...company, name } : company,
+    ),
   };
   persist();
   emit();
@@ -454,6 +519,48 @@ export function removeCompany(id: string) {
     .then(({ error }) => error && reportError("Remove company", error));
 }
 
+export function addMachineHour(entry: Omit<MachineHour, "id">) {
+  const tempId = uid();
+  state = { ...state, machineHours: [{ ...entry, id: tempId }, ...state.machineHours] };
+  persist();
+  emit();
+  void (async () => {
+    const { data, error } = await supabase
+      .from("machine_hours")
+      .insert({
+        machine_id: entry.machineId ? toDbId(entry.machineId) : null,
+        operator_id: entry.operatorId ? toDbId(entry.operatorId) : null,
+        work_date: entry.workDate,
+        hours: entry.hours,
+        job_number: entry.jobNumber || null,
+        notes: entry.notes || null,
+      })
+      .select("id")
+      .single();
+    if (error) return reportError("Add machine hours", error);
+    state = {
+      ...state,
+      machineHours: state.machineHours.map((m) =>
+        m.id === tempId ? { ...m, id: String(data.id) } : m,
+      ),
+    };
+    persist();
+    emit();
+  })();
+}
+
+export function removeMachineHour(id: string) {
+  state = { ...state, machineHours: state.machineHours.filter((entry) => entry.id !== id) };
+  persist();
+  emit();
+  if (!isSavedId(id)) return;
+  void supabase
+    .from("machine_hours")
+    .delete()
+    .eq("id", toDbId(id))
+    .then(({ error }) => error && reportError("Remove machine hours", error));
+}
+
 export function addTimelinessConfiguration(configuration: Omit<TimelinessConfiguration, "id">) {
   const tempId = uid();
   state = {
@@ -470,7 +577,9 @@ export function addTimelinessConfiguration(configuration: Omit<TimelinessConfigu
         report_table: configuration.reportTable,
         frequency: configuration.frequency,
         submission_day: configuration.submissionDay,
-        submitted_by: configuration.submittedByUserId ? toDbId(configuration.submittedByUserId) : null,
+        submitted_by: configuration.submittedByUserId
+          ? toDbId(configuration.submittedByUserId)
+          : null,
       })
       .select("id")
       .single();
@@ -486,7 +595,10 @@ export function addTimelinessConfiguration(configuration: Omit<TimelinessConfigu
   })();
 }
 
-export function updateTimelinessConfiguration(id: string, configuration: Omit<TimelinessConfiguration, "id">) {
+export function updateTimelinessConfiguration(
+  id: string,
+  configuration: Omit<TimelinessConfiguration, "id">,
+) {
   state = {
     ...state,
     timelinessConfigurations: state.timelinessConfigurations.map((entry) =>
@@ -503,7 +615,9 @@ export function updateTimelinessConfiguration(id: string, configuration: Omit<Ti
       report_table: configuration.reportTable,
       frequency: configuration.frequency,
       submission_day: configuration.submissionDay,
-      submitted_by: configuration.submittedByUserId ? toDbId(configuration.submittedByUserId) : null,
+      submitted_by: configuration.submittedByUserId
+        ? toDbId(configuration.submittedByUserId)
+        : null,
     })
     .eq("id", toDbId(id))
     .then(({ error }) => error && reportError("Update timeliness configuration", error));
@@ -564,7 +678,10 @@ export function addOrder(order: Omit<ToolOrder, "id">) {
       .select("id")
       .single();
     if (error) return reportError("Add order", error);
-    state = { ...state, orders: state.orders.map((o) => (o.id === tempId ? { ...o, id: String(data.id) } : o)) };
+    state = {
+      ...state,
+      orders: state.orders.map((o) => (o.id === tempId ? { ...o, id: String(data.id) } : o)),
+    };
     persist();
     emit();
   })();
@@ -607,7 +724,10 @@ export function addUser(name: string) {
   void (async () => {
     const { data, error } = await supabase.from("app_users").insert({ name }).select("id").single();
     if (error) return reportError("Add user", error);
-    state = { ...state, users: state.users.map((u) => (u.id === tempId ? { ...u, id: String(data.id) } : u)) };
+    state = {
+      ...state,
+      users: state.users.map((u) => (u.id === tempId ? { ...u, id: String(data.id) } : u)),
+    };
     persist();
     emit();
   })();
@@ -636,18 +756,19 @@ export function addAssignment(assignment: Omit<ToolAssignment, "id">): StockNoti
         ? "critical"
         : null
     : null;
-  const notification: StockNotification | null = item && level
-    ? {
-        id: uid(),
-        itemId: item.id,
-        itemName: item.name,
-        level,
-        balance: nextBalance,
-        threshold: item.threshold,
-        createdAt: new Date().toISOString(),
-        read: false,
-      }
-    : null;
+  const notification: StockNotification | null =
+    item && level
+      ? {
+          id: uid(),
+          itemId: item.id,
+          itemName: item.name,
+          level,
+          balance: nextBalance,
+          threshold: item.threshold,
+          createdAt: new Date().toISOString(),
+          read: false,
+        }
+      : null;
   const tempId = uid();
   state = {
     ...state,
@@ -677,11 +798,23 @@ export function addAssignment(assignment: Omit<ToolAssignment, "id">): StockNoti
     if (error) return reportError("Add assignment", error);
     state = {
       ...state,
-      assignments: state.assignments.map((a) => (a.id === tempId ? { ...a, id: String(data.id) } : a)),
+      assignments: state.assignments.map((a) =>
+        a.id === tempId ? { ...a, id: String(data.id) } : a,
+      ),
     };
     persist();
     emit();
   })();
+  if (notification) {
+    void notifyLowStock({
+      data: {
+        itemName: notification.itemName,
+        level: notification.level,
+        balance: notification.balance,
+        threshold: notification.threshold,
+      },
+    }).catch((error: unknown) => console.error("[push] notifyLowStock failed:", error));
+  }
   return notification;
 }
 

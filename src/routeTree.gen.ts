@@ -14,6 +14,7 @@ import { Route as BrandRouteImport } from './routes/brand'
 import { Route as CompanyRouteImport } from './routes/company'
 import { Route as InventoryItemsRouteImport } from './routes/inventory-items'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as MachineHoursRouteImport } from './routes/machine-hours'
 import { Route as TimelinessConfigurationRouteImport } from './routes/timeliness-configuration'
 import { Route as ToolAssignedLogRouteImport } from './routes/tool-assigned-log'
 import { Route as ToolTypesRouteImport } from './routes/tool-types'
@@ -43,6 +44,11 @@ const InventoryItemsRoute = InventoryItemsRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MachineHoursRoute = MachineHoursRouteImport.update({
+  id: '/machine-hours',
+  path: '/machine-hours',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TimelinessConfigurationRoute = TimelinessConfigurationRouteImport.update({
@@ -77,6 +83,7 @@ export interface FileRoutesByFullPath {
   '/company': typeof CompanyRoute
   '/inventory-items': typeof InventoryItemsRoute
   '/login': typeof LoginRoute
+  '/machine-hours': typeof MachineHoursRoute
   '/timeliness-configuration': typeof TimelinessConfigurationRoute
   '/tool-assigned-log': typeof ToolAssignedLogRoute
   '/tool-types': typeof ToolTypesRoute
@@ -89,6 +96,7 @@ export interface FileRoutesByTo {
   '/company': typeof CompanyRoute
   '/inventory-items': typeof InventoryItemsRoute
   '/login': typeof LoginRoute
+  '/machine-hours': typeof MachineHoursRoute
   '/timeliness-configuration': typeof TimelinessConfigurationRoute
   '/tool-assigned-log': typeof ToolAssignedLogRoute
   '/tool-types': typeof ToolTypesRoute
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   '/company': typeof CompanyRoute
   '/inventory-items': typeof InventoryItemsRoute
   '/login': typeof LoginRoute
+  '/machine-hours': typeof MachineHoursRoute
   '/timeliness-configuration': typeof TimelinessConfigurationRoute
   '/tool-assigned-log': typeof ToolAssignedLogRoute
   '/tool-types': typeof ToolTypesRoute
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
     | '/company'
     | '/inventory-items'
     | '/login'
+    | '/machine-hours'
     | '/timeliness-configuration'
     | '/tool-assigned-log'
     | '/tool-types'
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
     | '/company'
     | '/inventory-items'
     | '/login'
+    | '/machine-hours'
     | '/timeliness-configuration'
     | '/tool-assigned-log'
     | '/tool-types'
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
     | '/company'
     | '/inventory-items'
     | '/login'
+    | '/machine-hours'
     | '/timeliness-configuration'
     | '/tool-assigned-log'
     | '/tool-types'
@@ -153,6 +165,7 @@ export interface RootRouteChildren {
   CompanyRoute: typeof CompanyRoute
   InventoryItemsRoute: typeof InventoryItemsRoute
   LoginRoute: typeof LoginRoute
+  MachineHoursRoute: typeof MachineHoursRoute
   TimelinessConfigurationRoute: typeof TimelinessConfigurationRoute
   ToolAssignedLogRoute: typeof ToolAssignedLogRoute
   ToolTypesRoute: typeof ToolTypesRoute
@@ -195,6 +208,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/machine-hours': {
+      id: '/machine-hours'
+      path: '/machine-hours'
+      fullPath: '/machine-hours'
+      preLoaderRoute: typeof MachineHoursRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/timeliness-configuration': {
@@ -241,6 +261,7 @@ const rootRouteChildren: RootRouteChildren = {
   CompanyRoute: CompanyRoute,
   InventoryItemsRoute: InventoryItemsRoute,
   LoginRoute: LoginRoute,
+  MachineHoursRoute: MachineHoursRoute,
   TimelinessConfigurationRoute: TimelinessConfigurationRoute,
   ToolAssignedLogRoute: ToolAssignedLogRoute,
   ToolTypesRoute: ToolTypesRoute,

@@ -251,6 +251,66 @@ export type Database = {
         }
         Relationships: []
       }
+      push_subscriptions: {
+        Row: {
+          id: number
+          user_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: number
+          user_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: number
+          user_id?: string
+          endpoint?: string
+          p256dh?: string
+          auth?: string
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      machine_hours: {
+        Row: {
+          id: number
+          machine_id: number | null
+          operator_id: number | null
+          work_date: string
+          hours: number
+          job_number: string | null
+          notes: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: number
+          machine_id?: number | null
+          operator_id?: number | null
+          work_date: string
+          hours?: number
+          job_number?: string | null
+          notes?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: number
+          machine_id?: number | null
+          operator_id?: number | null
+          work_date?: string
+          hours?: number
+          job_number?: string | null
+          notes?: string | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
