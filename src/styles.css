@@ -262,6 +262,17 @@
   backdrop-filter: blur(14px) saturate(145%);
 }
 
+/* Native <select> dropdown popups are rendered by the OS/browser, not by
+   our CSS theme. Force a light popup with solid text so options stay
+   readable regardless of the app's dark/light theme. */
+select {
+  color-scheme: light;
+}
+select option {
+  color: #111827;
+  background-color: #ffffff;
+}
+
 @utility left-menu-glass {
   background-color: var(--menu-glass);
   background-image:
