@@ -118,13 +118,14 @@ function ToolAssignedLogPage() {
           </div>
 
           <div className="glass-surface overflow-hidden rounded-2xl border shadow-xl shadow-accent-brand/5">
-            <div className="hidden grid-cols-[minmax(12rem,1.3fr)_minmax(8rem,0.7fr)_7rem_6rem_6rem_minmax(10rem,0.9fr)] items-center gap-4 border-b border-line px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-fg lg:grid">
+            <div className="hidden grid-cols-[minmax(12rem,1.3fr)_minmax(8rem,0.7fr)_7rem_6rem_6rem_minmax(9rem,0.8fr)_minmax(9rem,0.8fr)] items-center gap-4 border-b border-line px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-fg lg:grid">
               <span>Item</span>
               <span>Tool type</span>
               <span>Issued date</span>
               <span className="text-right">Issued</span>
               <span className="text-right">Balance</span>
               <span>Issued to</span>
+              <span>Location</span>
             </div>
 
             {visibleRows.length === 0 ? (
@@ -135,7 +136,7 @@ function ToolAssignedLogPage() {
             ) : (
               <div className="divide-y divide-line">
                 {visibleRows.map((row, index) => (
-                  <article key={row.id} className="px-4 py-3.5 lg:grid lg:grid-cols-[minmax(12rem,1.3fr)_minmax(8rem,0.7fr)_7rem_6rem_6rem_minmax(10rem,0.9fr)] lg:items-center lg:gap-4">
+                  <article key={row.id} className="px-4 py-3.5 lg:grid lg:grid-cols-[minmax(12rem,1.3fr)_minmax(8rem,0.7fr)_7rem_6rem_6rem_minmax(9rem,0.8fr)_minmax(9rem,0.8fr)] lg:items-center lg:gap-4">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold">{row.toolName}</p>
                       <p className="truncate text-[12px] text-muted-fg lg:hidden">{row.toolType}</p>
@@ -148,12 +149,16 @@ function ToolAssignedLogPage() {
                       <span className="grid size-7 shrink-0 place-items-center rounded-full bg-chip text-[10px] font-bold text-accent-brand">{row.recipientName.charAt(0).toUpperCase()}</span>
                       <span className="truncate text-[13px]">{row.recipientName}</span>
                     </div>
+                    <span className="hidden truncate text-[12px] text-muted-fg lg:block">{row.location || "—"}</span>
                     <div className="mt-2 flex items-center gap-4 lg:hidden">
                       <div><p className="text-[10px] uppercase text-muted-fg">Date</p><p className="font-mono text-[11px]">{formatDate(row.issuedDate)}</p></div>
                       <div><p className="text-[10px] uppercase text-muted-fg">Issued</p><p className="font-mono text-[11px] font-semibold">{row.qtyIssued}</p></div>
                       <div><p className="text-[10px] uppercase text-muted-fg">Balance</p><p className="font-mono text-[11px] font-semibold">{row.balance}</p></div>
                     </div>
                     <p className="mt-2 text-[12px] lg:hidden">Issued to <span className="font-semibold">{row.recipientName}</span> from {row.issuedFrom}</p>
+                    {row.location && (
+                      <p className="mt-1 text-[12px] text-muted-fg lg:hidden">Location: {row.location}</p>
+                    )}
                   </article>
                 ))}
               </div>

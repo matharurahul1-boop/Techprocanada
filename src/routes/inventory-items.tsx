@@ -52,6 +52,7 @@ function InventoryItemsPage() {
   const [remarks, setRemarks] = useState("");
   const [jobNumber, setJobNumber] = useState("");
   const [drawingNumber, setDrawingNumber] = useState("");
+  const [location, setLocation] = useState("");
   const [purchaseDate, setPurchaseDate] = useState("");
   const [brandId, setBrandId] = useState("");
   const [orderQty, setOrderQty] = useState("");
@@ -189,6 +190,7 @@ function InventoryItemsPage() {
     setRemarks("");
     setJobNumber("");
     setDrawingNumber("");
+    setLocation("");
   };
 
   const submitAssign = (e: React.FormEvent) => {
@@ -204,6 +206,7 @@ function InventoryItemsPage() {
       remarks,
       jobNumber,
       drawingNumber,
+      location,
     });
     if (notification) {
       const isCritical = notification.level === "critical";
@@ -217,6 +220,7 @@ function InventoryItemsPage() {
     setRemarks("");
     setJobNumber("");
     setDrawingNumber("");
+    setLocation("");
   };
 
   return (
@@ -701,6 +705,17 @@ function InventoryItemsPage() {
             </span>
           </div>
 
+          <label className={labelClass} htmlFor="assign-location">
+            Location
+          </label>
+          <input
+            id="assign-location"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder="e.g. BonHill Location (Welding)"
+            className={`${fieldClass} mb-4`}
+          />
+
           <div className="mb-4 grid grid-cols-2 gap-3">
             <div>
               <label className={labelClass} htmlFor="issued-date">
@@ -819,6 +834,9 @@ function InventoryItemsPage() {
                         {a.jobNumber && a.drawingNumber ? " · " : ""}
                         {a.drawingNumber}
                       </p>
+                    )}
+                    {a.location && (
+                      <p className="truncate font-mono text-[11px] text-muted-fg">{a.location}</p>
                     )}
                     {a.remarks && (
                       <p className="text-[11px] text-muted-fg">{a.remarks}</p>

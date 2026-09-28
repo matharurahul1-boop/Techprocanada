@@ -67,6 +67,7 @@ export type ToolAssignment = {
   remarks: string;
   jobNumber: string;
   drawingNumber: string;
+  location: string;
 };
 
 export type StockNotification = {
@@ -177,6 +178,7 @@ const mapAssignment = (r: Tables<"inventory_assigned">): ToolAssignment => ({
   remarks: r.remarks ?? "",
   jobNumber: r.job_number ?? "",
   drawingNumber: r.drawing_number ?? "",
+  location: r.source_location ?? "",
 });
 
 const mapMachine = (r: Tables<"machines">): Machine => ({ id: String(r.id), name: r.name });
@@ -816,6 +818,7 @@ export function addAssignment(assignment: Omit<ToolAssignment, "id">): StockNoti
         remarks: assignment.remarks || null,
         job_number: assignment.jobNumber || null,
         drawing_number: assignment.drawingNumber || null,
+        source_location: assignment.location || null,
       })
       .select("id")
       .single();

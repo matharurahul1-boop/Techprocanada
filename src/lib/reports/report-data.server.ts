@@ -79,17 +79,19 @@ async function inventoryAssignedReport(db: Db, period: Period): Promise<ReportRe
 
   return {
     columns: [
-      { header: "Item", width: 150 },
-      { header: "Type", width: 90 },
-      { header: "Issued to", width: 80 },
-      { header: "Issued date", width: 70 },
-      { header: "Qty issued", width: 55 },
-      { header: "Job #", width: 70 },
+      { header: "Item", width: 130 },
+      { header: "Type", width: 80 },
+      { header: "Issued to", width: 70 },
+      { header: "Location", width: 90 },
+      { header: "Issued date", width: 65 },
+      { header: "Qty issued", width: 45 },
+      { header: "Job #", width: 55 },
     ],
     rows: (assignedRes.data ?? []).map((a) => [
       a.item_id != null ? (lookups.itemName.get(a.item_id) ?? `#${a.item_id}`) : "-",
       a.item_id != null ? (lookups.itemType.get(a.item_id) ?? "-") : "-",
       a.user_id != null ? (lookups.userName.get(a.user_id) ?? `#${a.user_id}`) : "-",
+      a.source_location ?? "-",
       a.issued_date ?? "-",
       String(a.qty_issued),
       a.job_number ?? "-",
