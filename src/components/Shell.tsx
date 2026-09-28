@@ -4,6 +4,7 @@ import {
   Bell,
   CalendarClock,
   ClipboardList,
+  CircleDollarSign,
   Cog,
   DollarSign,
   LayoutDashboard,
@@ -45,6 +46,7 @@ const navItems = [
   { to: "/low-stock", long: "Low Stock", short: "Low Stock", icon: TriangleAlert },
   { to: "/tools-order-log", long: "Tools Order Log", short: "Orders", icon: ShoppingCart },
   { to: "/monthly-expense", long: "Monthly Expense", short: "Expense", icon: DollarSign },
+  { to: "/fill-amount", long: "Fill Amount", short: "Fill Amt", icon: CircleDollarSign },
   { to: "/tool-assigned-log", long: "Tool Assigned Log", short: "Log", icon: ClipboardList },
   { to: "/machine-hours", long: "Machining Hours", short: "Machining", icon: Wrench },
   { to: "/machines", long: "Machines", short: "Machines", icon: Cog },
@@ -67,6 +69,7 @@ const mobileMoreItems = [
   navItems[10],
   navItems[11],
   navItems[12],
+  navItems[13],
 ] as const;
 
 export function Shell({
