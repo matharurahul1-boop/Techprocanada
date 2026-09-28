@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
-import techProLogo from "@/assets/techpro-logo.png.asset.json";
+import techProLogo from "@/assets/techpro-logo.png";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -68,7 +68,7 @@ function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-canvas px-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
-          <img src={techProLogo.url} alt="TechPro Industries Inc." className="mb-2 h-auto w-36 object-contain" />
+          <img src={techProLogo} alt="TechPro Industries Inc." className="mb-2 h-auto w-36 object-contain" />
           <CardTitle>TechPro Inventory Console</CardTitle>
           <CardDescription>Sign in to continue, or create an account.</CardDescription>
         </CardHeader>

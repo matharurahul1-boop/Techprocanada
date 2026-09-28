@@ -28,7 +28,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import techProLogo from "@/assets/techpro-logo.png.asset.json";
+import techProLogo from "@/assets/techpro-logo.png";
 import { clearNotifications, markNotificationsRead, useStore } from "@/lib/store";
 import { useAuth } from "@/hooks/use-auth";
 import { usePushNotifications } from "@/hooks/use-push";
@@ -119,7 +119,7 @@ export function Shell({
             >
               {isMenuExpanded ? (
                 <img
-                  src={techProLogo.url}
+                  src={techProLogo}
                   alt="TechPro Industries Inc."
                   className="h-auto w-[142px] min-w-0 object-contain"
                 />
