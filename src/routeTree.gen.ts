@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as BrandRouteImport } from './routes/brand'
 import { Route as CompanyRouteImport } from './routes/company'
 import { Route as FillAmountRouteImport } from './routes/fill-amount'
+import { Route as InstallAppRouteImport } from './routes/install-app'
 import { Route as InventoryItemsRouteImport } from './routes/inventory-items'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LowStockRouteImport } from './routes/low-stock'
@@ -44,6 +45,11 @@ const CompanyRoute = CompanyRouteImport.update({
 const FillAmountRoute = FillAmountRouteImport.update({
   id: '/fill-amount',
   path: '/fill-amount',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstallAppRoute = InstallAppRouteImport.update({
+  id: '/install-app',
+  path: '/install-app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InventoryItemsRoute = InventoryItemsRouteImport.update({
@@ -112,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/brand': typeof BrandRoute
   '/company': typeof CompanyRoute
   '/fill-amount': typeof FillAmountRoute
+  '/install-app': typeof InstallAppRoute
   '/inventory-items': typeof InventoryItemsRoute
   '/login': typeof LoginRoute
   '/low-stock': typeof LowStockRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/brand': typeof BrandRoute
   '/company': typeof CompanyRoute
   '/fill-amount': typeof FillAmountRoute
+  '/install-app': typeof InstallAppRoute
   '/inventory-items': typeof InventoryItemsRoute
   '/login': typeof LoginRoute
   '/low-stock': typeof LowStockRoute
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/brand': typeof BrandRoute
   '/company': typeof CompanyRoute
   '/fill-amount': typeof FillAmountRoute
+  '/install-app': typeof InstallAppRoute
   '/inventory-items': typeof InventoryItemsRoute
   '/login': typeof LoginRoute
   '/low-stock': typeof LowStockRoute
@@ -169,6 +178,7 @@ export interface FileRouteTypes {
     | '/brand'
     | '/company'
     | '/fill-amount'
+    | '/install-app'
     | '/inventory-items'
     | '/login'
     | '/low-stock'
@@ -187,6 +197,7 @@ export interface FileRouteTypes {
     | '/brand'
     | '/company'
     | '/fill-amount'
+    | '/install-app'
     | '/inventory-items'
     | '/login'
     | '/low-stock'
@@ -205,6 +216,7 @@ export interface FileRouteTypes {
     | '/brand'
     | '/company'
     | '/fill-amount'
+    | '/install-app'
     | '/inventory-items'
     | '/login'
     | '/low-stock'
@@ -224,6 +236,7 @@ export interface RootRouteChildren {
   BrandRoute: typeof BrandRoute
   CompanyRoute: typeof CompanyRoute
   FillAmountRoute: typeof FillAmountRoute
+  InstallAppRoute: typeof InstallAppRoute
   InventoryItemsRoute: typeof InventoryItemsRoute
   LoginRoute: typeof LoginRoute
   LowStockRoute: typeof LowStockRoute
@@ -266,6 +279,13 @@ declare module '@tanstack/react-router' {
       path: '/fill-amount'
       fullPath: '/fill-amount'
       preLoaderRoute: typeof FillAmountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/install-app': {
+      id: '/install-app'
+      path: '/install-app'
+      fullPath: '/install-app'
+      preLoaderRoute: typeof InstallAppRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inventory-items': {
@@ -360,6 +380,7 @@ const rootRouteChildren: RootRouteChildren = {
   BrandRoute: BrandRoute,
   CompanyRoute: CompanyRoute,
   FillAmountRoute: FillAmountRoute,
+  InstallAppRoute: InstallAppRoute,
   InventoryItemsRoute: InventoryItemsRoute,
   LoginRoute: LoginRoute,
   LowStockRoute: LowStockRoute,

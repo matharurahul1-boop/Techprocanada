@@ -8,6 +8,7 @@ import {
   CircleDollarSign,
   Cog,
   DollarSign,
+  Download,
   LayoutDashboard,
   Layers,
   LogOut,
@@ -63,6 +64,7 @@ const navItems = [
     short: "Timeliness",
     icon: CalendarClock,
   },
+  { to: "/install-app", long: "Install App", short: "Install", icon: Download },
 ] as const;
 
 // These live inside the collapsible "Tools" group in the desktop sidebar.
@@ -80,6 +82,7 @@ const mobileMoreItems = [
   navItems[11],
   navItems[12],
   navItems[13],
+  navItems[14],
 ] as const;
 
 export function Shell({
