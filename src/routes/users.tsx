@@ -1,10 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
 import { Trash2 } from "lucide-react";
-import { Shell, fieldClass, labelClass } from "@/components/Shell";
-import { AddButton, Sheet } from "@/components/Sheet";
+import { Shell } from "@/components/Shell";
 
-import { addUser, removeUser, setUserActive, useStore } from "@/lib/store";
+import { removeUser, setUserActive, useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/users")({
   head: () => ({
@@ -13,12 +11,12 @@ export const Route = createFileRoute("/users")({
       {
         name: "description",
         content:
-          "Maintain the crew list used when assigning TechPro tools and consumables to a team member.",
+          "Manage the crew accounts used when assigning TechPro tools and consumables to a team member.",
       },
       { property: "og:title", content: "Users — TechPro Inventory Console" },
       {
         property: "og:description",
-        content: "Maintain the crew list used for TechPro tool assignments.",
+        content: "Manage crew accounts used for TechPro tool assignments.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -29,57 +27,24 @@ export const Route = createFileRoute("/users")({
 
 function UsersPage() {
   const { users, assignments } = useStore();
-  const [name, setName] = useState("");
-  const [open, setOpen] = useState(false);
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const value = name.trim();
-    if (!value) return;
-    addUser(value);
-    setName("");
-    setOpen(false);
-  };
 
   return (
-    <Shell
-      eyebrow="Users"
-      title="Crew & recipients"
-      action={<AddButton label="Add user" onClick={() => setOpen(true)} />}
-    >
-      <Sheet open={open} title="New user" onClose={() => setOpen(false)}>
-        <form onSubmit={submit}>
-          <label className={labelClass} htmlFor="user-name">
-            User name
-          </label>
-          <input
-            id="user-name"
-            autoFocus
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Priya Nair"
-            className={`${fieldClass} mb-5`}
-          />
-          <button
-            type="submit"
-            className="brand-gradient h-11 w-full rounded-xl text-sm font-semibold text-accent-brand-ink shadow-lg shadow-accent-brand/20 transition hover:brightness-110"
-          >
-            Add user
-          </button>
-        </form>
-      </Sheet>
-
+    <Shell eyebrow="Users" title="Crew & recipients">
       <div className="animate-rise px-5 py-6 lg:px-8 lg:py-8">
         <section className="min-w-0">
           <div className="mb-3 flex items-center justify-between px-1">
             <h2 className="font-display text-base font-semibold">Users</h2>
             <span className="font-mono text-[12px] text-muted-fg">{users.length} users</span>
           </div>
+          <p className="mb-3 px-1 text-[12px] text-muted-fg">
+            Users appear here once they sign up on the login page. There's no manual add — activate,
+            deactivate, or remove a user below.
+          </p>
 
           <div className="glass-surface divide-y divide-line overflow-hidden rounded-2xl border shadow-xl shadow-accent-brand/5">
             {users.length === 0 && (
               <p className="px-4 py-8 text-center text-sm text-muted-fg">
-                No users yet. Add your first one.
+                No users yet. They'll show up here once someone signs up.
               </p>
             )}
             {users.map((user) => {
@@ -100,7 +65,7 @@ function UsersPage() {
                     </div>
                     <p className="font-mono text-[12px] text-muted-fg">
                       {count} assignments
-                      {user.hasLogin && user.email ? ` · ${user.email}` : !user.hasLogin ? " · no login" : ""}
+                      {user.hasLogin && user.email ? ` · ${user.email}` : !user.hasLogin ? " · no login yet" : ""}
                     </p>
                   </div>
                   {user.hasLogin && (

@@ -121,7 +121,7 @@ export function Shell({
                 <img
                   src={techProLogo}
                   alt="TechPro Industries Inc."
-                  className="h-auto w-[142px] min-w-0 object-contain"
+                  className="h-9 w-auto min-w-0 object-contain"
                 />
               ) : null}
               <Button
