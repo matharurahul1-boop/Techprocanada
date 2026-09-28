@@ -56,7 +56,9 @@ function DashboardPage() {
       <div className="animate-rise space-y-5 px-5 py-6 lg:px-8 lg:py-8">
         <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <Metric icon={Boxes} label="Inventory items" value={String(items.length)} note={`${totalBalance} units on hand`} />
-          <Metric icon={AlertTriangle} label="Low stock alerts" value={String(lowItems.length)} note={`${lowItems.filter((item) => item.essential).length} essential`} alert />
+          <Link to="/inventory-items" search={{ balance: "below" }} className="block">
+            <Metric icon={AlertTriangle} label="Low stock alerts" value={String(lowItems.length)} note={`${lowItems.filter((item) => item.essential).length} essential`} alert />
+          </Link>
           <Metric icon={PackageCheck} label="Units issued" value={String(totalIssued)} note={`${utilization}% of ordered stock`} />
           <Metric icon={DollarSign} label="Procurement spend" value={currency.format(procurementSpend)} note={`${orders.length} purchase records`} />
         </section>
@@ -90,7 +92,7 @@ function DashboardPage() {
                 {lowItems.slice(0, 5).map((item) => <div key={item.id} className="flex items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="truncate text-sm font-semibold">{item.name}</p><p className="text-[11px] text-muted-fg">Threshold {item.threshold}{item.essential ? " · Essential" : ""}</p></div><span className="rounded-lg bg-warn-soft px-2.5 py-1 font-mono text-xs font-bold text-warn">{balanceOf(item)} left</span></div>)}
               </div>
             )}
-            <Link to="/inventory-items" className="mt-4 flex items-center justify-between border-t border-line pt-4 text-xs font-semibold text-muted-fg transition hover:text-ink"><span>Review inventory</span><ArrowRight size={14} /></Link>
+            <Link to="/inventory-items" search={{ balance: "below" }} className="mt-4 flex items-center justify-between border-t border-line pt-4 text-xs font-semibold text-muted-fg transition hover:text-ink"><span>Review inventory</span><ArrowRight size={14} /></Link>
           </div>
         </section>
 

@@ -20,6 +20,12 @@ import {
 } from "@/lib/store";
 
 export const Route = createFileRoute("/inventory-items")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    balance:
+      search["balance"] === "below" || search["balance"] === "threshold" || search["balance"] === "above"
+        ? (search["balance"] as "below" | "threshold" | "above")
+        : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Inventory Items — TechPro Inventory Console" },
@@ -42,6 +48,7 @@ export const Route = createFileRoute("/inventory-items")({
 
 function InventoryItemsPage() {
   const { toolTypes, items, brands, orders, users, assignments, machines } = useStore();
+  const routeSearch = Route.useSearch();
   const [orderItemId, setOrderItemId] = useState<string | null>(null);
   const [assignItemId, setAssignItemId] = useState<string | null>(null);
   const [issuedTo, setIssuedTo] = useState("");
@@ -70,7 +77,9 @@ function InventoryItemsPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filterTypeId, setFilterTypeId] = useState("all");
-  const [balanceFilter, setBalanceFilter] = useState<"all" | "below" | "threshold" | "above">("all");
+  const [balanceFilter, setBalanceFilter] = useState<"all" | "below" | "threshold" | "above">(
+    routeSearch.balance ?? "all",
+  );
 
 
   const orderedNum = Number(ordered) || 0;
