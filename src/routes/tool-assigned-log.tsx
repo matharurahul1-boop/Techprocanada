@@ -7,6 +7,66 @@ import { balanceOf, useStore } from "@/lib/store";
 
 const PAGE_SIZE = 15;
 
+const toISODate = (d: Date) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+type PresetKey = "all" | "today" | "yesterday" | "thisWeek" | "lastWeek" | "thisMonth" | "lastMonth";
+
+function presetRange(key: PresetKey): { from: string; to: string } {
+  const now = new Date();
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+  if (key === "today") {
+    const d = toISODate(now);
+    return { from: d, to: d };
+  }
+  if (key === "yesterday") {
+    const y = new Date(now);
+    y.setDate(y.getDate() - 1);
+    const d = toISODate(y);
+    return { from: d, to: d };
+  }
+  if (key === "thisWeek") {
+    const start = startOfDay(now);
+    start.setDate(start.getDate() - start.getDay());
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    return { from: toISODate(start), to: toISODate(end) };
+  }
+  if (key === "lastWeek") {
+    const start = startOfDay(now);
+    start.setDate(start.getDate() - start.getDay() - 7);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    return { from: toISODate(start), to: toISODate(end) };
+  }
+  if (key === "thisMonth") {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return { from: toISODate(start), to: toISODate(end) };
+  }
+  if (key === "lastMonth") {
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const end = new Date(now.getFullYear(), now.getMonth(), 0);
+    return { from: toISODate(start), to: toISODate(end) };
+  }
+  return { from: "", to: "" };
+}
+
+const PRESETS: { key: PresetKey; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "today", label: "Today" },
+  { key: "yesterday", label: "Yesterday" },
+  { key: "thisWeek", label: "This Week" },
+  { key: "lastWeek", label: "Last Week" },
+  { key: "thisMonth", label: "This Month" },
+  { key: "lastMonth", label: "Last Month" },
+];
+
 export const Route = createFileRoute("/tool-assigned-log")({
   head: () => ({
     meta: [
@@ -29,12 +89,21 @@ export const Route = createFileRoute("/tool-assigned-log")({
 
 function ToolAssignedLogPage() {
   const { assignments, items, toolTypes, users } = useStore();
-  const [date, setDate] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [activePreset, setActivePreset] = useState<PresetKey>("all");
   const [quantity, setQuantity] = useState("");
   const [tool, setTool] = useState("");
   const [type, setType] = useState("");
   const [recipient, setRecipient] = useState("");
   const [page, setPage] = useState(1);
+
+  const applyPreset = (key: PresetKey) => {
+    setActivePreset(key);
+    const { from, to } = presetRange(key);
+    setDateFrom(from);
+    setDateTo(to);
+  };
 
   const rows = useMemo(() => {
     const itemById = new Map(items.map((item) => [item.id, item]));
@@ -57,26 +126,29 @@ function ToolAssignedLogPage() {
       .filter((row) => {
         const quantityMatch = !quantity || row.qtyIssued === Number(quantity);
         return (
-          (!date || row.issuedDate === date) &&
+          (!dateFrom || row.issuedDate >= dateFrom) &&
+          (!dateTo || row.issuedDate <= dateTo) &&
           quantityMatch &&
           row.toolName.toLowerCase().includes(tool.trim().toLowerCase()) &&
           row.toolType.toLowerCase().includes(type.trim().toLowerCase()) &&
           row.recipientName.toLowerCase().includes(recipient.trim().toLowerCase())
         );
       });
-  }, [assignments, date, items, quantity, recipient, tool, toolTypes, type, users]);
+  }, [assignments, dateFrom, dateTo, items, quantity, recipient, tool, toolTypes, type, users]);
 
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
   const visibleRows = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const firstShown = rows.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
   const lastShown = Math.min(currentPage * PAGE_SIZE, rows.length);
-  const hasFilters = Boolean(date || quantity || tool || type || recipient);
+  const hasFilters = Boolean(dateFrom || dateTo || quantity || tool || type || recipient);
 
-  useEffect(() => setPage(1), [date, quantity, tool, type, recipient]);
+  useEffect(() => setPage(1), [dateFrom, dateTo, quantity, tool, type, recipient]);
 
   const clearFilters = () => {
-    setDate("");
+    setDateFrom("");
+    setDateTo("");
+    setActivePreset("all");
     setQuantity("");
     setTool("");
     setType("");
@@ -100,7 +172,7 @@ function ToolAssignedLogPage() {
             </span>
           </div>
 
-          <div className="glass-surface mb-3 grid gap-2 rounded-xl border p-2 sm:grid-cols-2 lg:grid-cols-[minmax(12rem,1fr)_repeat(4,minmax(8rem,0.6fr))_auto]">
+          <div className="glass-surface mb-3 grid gap-2 rounded-xl border p-2 sm:grid-cols-2 lg:grid-cols-[minmax(12rem,1fr)_repeat(5,minmax(7rem,0.55fr))_auto]">
             <label className="relative block">
               <span className="sr-only">Filter by tool name</span>
               <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-fg" />
@@ -109,12 +181,48 @@ function ToolAssignedLogPage() {
             <input aria-label="Filter by tool type" value={type} onChange={(event) => setType(event.target.value)} placeholder="Tool type" className={fieldClass} />
             <input aria-label="Filter by recipient" value={recipient} onChange={(event) => setRecipient(event.target.value)} placeholder="Issued to" className={fieldClass} />
             <input aria-label="Filter by quantity" type="number" min="0" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="Quantity" className={fieldClass} />
-            <input aria-label="Filter by issued date" type="date" value={date} onChange={(event) => setDate(event.target.value)} className={fieldClass} />
+            <input
+              aria-label="Filter from date"
+              type="date"
+              value={dateFrom}
+              onChange={(event) => {
+                setActivePreset("all");
+                setDateFrom(event.target.value);
+              }}
+              className={fieldClass}
+            />
+            <input
+              aria-label="Filter to date"
+              type="date"
+              value={dateTo}
+              onChange={(event) => {
+                setActivePreset("all");
+                setDateTo(event.target.value);
+              }}
+              className={fieldClass}
+            />
             {hasFilters && (
               <button type="button" onClick={clearFilters} aria-label="Clear filters" title="Clear filters" className="grid size-10 place-items-center self-center rounded-lg text-muted-fg transition hover:bg-chip hover:text-ink">
                 <X size={16} />
               </button>
             )}
+          </div>
+
+          <div className="mb-3 flex flex-wrap gap-1.5">
+            {PRESETS.map((preset) => (
+              <button
+                key={preset.key}
+                type="button"
+                onClick={() => applyPreset(preset.key)}
+                className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ring-1 transition ${
+                  activePreset === preset.key
+                    ? "bg-accent-brand text-accent-brand-ink ring-accent-brand"
+                    : "bg-panel text-muted-fg ring-line hover:text-ink"
+                }`}
+              >
+                {preset.label}
+              </button>
+            ))}
           </div>
 
           <div className="glass-surface overflow-hidden rounded-2xl border shadow-xl shadow-accent-brand/5">
