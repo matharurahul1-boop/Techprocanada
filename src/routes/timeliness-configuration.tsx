@@ -13,7 +13,7 @@ import {
   useStore,
   type TimelinessConfiguration,
 } from "@/lib/store";
-import { generateReportNow, getReportDownloadUrl, listReports } from "@/lib/reports/actions.functions";
+import { deleteReport, generateReportNow, getReportDownloadUrl, listReports } from "@/lib/reports/actions.functions";
 import type { Tables } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -112,6 +112,16 @@ function TimelinessConfigurationPage() {
     } catch (error) {
       console.error(error);
       toast.error(error instanceof Error ? error.message : "Could not open report.");
+    }
+  };
+
+  const removeReport = async (report: Tables<"generated_reports">) => {
+    try {
+      await deleteReport({ data: { id: report.id, storagePath: report.storage_path } });
+      setReports((current) => current.filter((entry) => entry.id !== report.id));
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Could not delete report.");
     }
   };
 
@@ -339,7 +349,7 @@ function TimelinessConfigurationPage() {
                           {report.period_start} → {report.period_end}
                         </span>
                       </div>
-                      <div className="flex items-center justify-end">
+                      <div className="flex items-center justify-end gap-1.5">
                         <Button
                           type="button"
                           variant="ghost"
@@ -350,6 +360,15 @@ function TimelinessConfigurationPage() {
                           <Download size={14} />
                           Download
                         </Button>
+                        <button
+                          type="button"
+                          onClick={() => void removeReport(report)}
+                          aria-label="Delete report"
+                          title="Delete"
+                          className="grid size-9 shrink-0 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     </article>
                   );

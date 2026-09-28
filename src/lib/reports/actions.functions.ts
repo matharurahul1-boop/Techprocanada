@@ -45,3 +45,13 @@ export const getReportDownloadUrl = createServerFn({ method: "POST" })
     if (error || !signed) throw new Error(error?.message ?? "Could not create a download link");
     return signed.signedUrl;
   });
+
+export const deleteReport = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) => z.object({ id: z.number(), storagePath: z.string() }).parse(data))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.storage.from("reports").remove([data.storagePath]);
+    const { error } = await supabaseAdmin.from("generated_reports").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+  });

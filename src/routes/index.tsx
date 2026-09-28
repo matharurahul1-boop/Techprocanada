@@ -63,8 +63,8 @@ function DashboardPage() {
           <Metric icon={DollarSign} label="Procurement spend" value={currency.format(procurementSpend)} note={`${orders.length} purchase records`} />
         </section>
 
-        <section className="grid gap-5 xl:grid-cols-[minmax(0,1.75fr)_minmax(18rem,0.8fr)]">
-          <div className="glass-surface min-h-[23rem] rounded-2xl border p-5 shadow-xl shadow-accent-brand/5 lg:p-6">
+        <section className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.75fr)_minmax(18rem,0.8fr)]">
+          <div className="glass-surface min-h-[23rem] min-w-0 rounded-2xl border p-5 shadow-xl shadow-accent-brand/5 lg:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div><p className="font-display text-lg font-bold">Stock movement</p><p className="mt-1 text-xs text-muted-fg">Ordered versus issued by highest-volume item</p></div>
               <div className="flex gap-4 text-[10px] font-semibold uppercase text-muted-fg"><span className="flex items-center gap-1.5"><i className="size-2 rounded-full bg-accent-brand" />Ordered</span><span className="flex items-center gap-1.5"><i className="size-2 rounded-full bg-good" />Issued</span></div>
@@ -72,20 +72,20 @@ function DashboardPage() {
             {movement.length === 0 ? <Empty message="Add inventory items to see stock movement." /> : (
               <div className="mt-8 space-y-5">
                 {movement.map((item) => (
-                  <div key={item.id} className="grid grid-cols-[minmax(6rem,10rem)_minmax(0,1fr)_2.5rem] items-center gap-3">
+                  <div key={item.id} className="grid min-w-0 grid-cols-[minmax(6rem,10rem)_minmax(0,1fr)_2.5rem] items-center gap-3">
                     <p className="min-w-0 truncate text-xs font-medium" title={item.name}>{item.name}</p>
-                    <div className="space-y-1.5">
+                    <div className="min-w-0 space-y-1.5">
                       <div className="h-2 overflow-hidden rounded-full bg-chip"><div className="h-full rounded-full bg-accent-brand transition-all" style={{ width: `${(item.ordered / maxMovement) * 100}%` }} /></div>
                       <div className="h-2 overflow-hidden rounded-full bg-chip"><div className="h-full rounded-full bg-good transition-all" style={{ width: `${(item.issued / maxMovement) * 100}%` }} /></div>
                     </div>
-                    <p className="text-right font-mono text-[11px] text-muted-fg">{item.ordered}/{item.issued}</p>
+                    <p className="min-w-0 text-right font-mono text-[11px] text-muted-fg">{item.ordered}/{item.issued}</p>
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          <div className="glass-surface rounded-2xl border p-5 shadow-xl shadow-accent-brand/5 lg:p-6">
+          <div className="glass-surface min-w-0 rounded-2xl border p-5 shadow-xl shadow-accent-brand/5 lg:p-6">
             <div className="flex items-start justify-between gap-3"><div><p className="font-display text-lg font-bold">Needs attention</p><p className="mt-1 text-xs text-muted-fg">At or below threshold</p></div><TrendingDown className="text-accent-brand" size={20} /></div>
             {lowItems.length === 0 ? <div className="mt-10 flex flex-col items-center text-center"><CheckCircle2 size={30} className="text-good" /><p className="mt-3 text-sm font-semibold">Stock levels look healthy</p></div> : (
               <div className="mt-5 divide-y divide-line">
