@@ -484,6 +484,50 @@ export function removeBrand(id: string) {
     .then(({ error }) => error && reportError("Remove brand", error));
 }
 
+export function addMachine(name: string) {
+  const tempId = uid();
+  state = { ...state, machines: [...state.machines, { id: tempId, name }] };
+  persist();
+  emit();
+  void (async () => {
+    const { data, error } = await supabase.from("machines").insert({ name }).select("id").single();
+    if (error) return reportError("Add machine", error);
+    state = {
+      ...state,
+      machines: state.machines.map((m) => (m.id === tempId ? { ...m, id: String(data.id) } : m)),
+    };
+    persist();
+    emit();
+  })();
+}
+
+export function updateMachine(id: string, name: string) {
+  state = {
+    ...state,
+    machines: state.machines.map((machine) => (machine.id === id ? { ...machine, name } : machine)),
+  };
+  persist();
+  emit();
+  if (!isSavedId(id)) return;
+  void supabase
+    .from("machines")
+    .update({ name })
+    .eq("id", toDbId(id))
+    .then(({ error }) => error && reportError("Update machine", error));
+}
+
+export function removeMachine(id: string) {
+  state = { ...state, machines: state.machines.filter((m) => m.id !== id) };
+  persist();
+  emit();
+  if (!isSavedId(id)) return;
+  void supabase
+    .from("machines")
+    .delete()
+    .eq("id", toDbId(id))
+    .then(({ error }) => error && reportError("Remove machine", error));
+}
+
 export function addCompany(name: string) {
   const tempId = uid();
   state = { ...state, companies: [...state.companies, { id: tempId, name }] };

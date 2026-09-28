@@ -16,6 +16,8 @@ import { Route as InventoryItemsRouteImport } from './routes/inventory-items'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LowStockRouteImport } from './routes/low-stock'
 import { Route as MachineHoursRouteImport } from './routes/machine-hours'
+import { Route as MachinesRouteImport } from './routes/machines'
+import { Route as MonthlyExpenseRouteImport } from './routes/monthly-expense'
 import { Route as TimelinessConfigurationRouteImport } from './routes/timeliness-configuration'
 import { Route as ToolAssignedLogRouteImport } from './routes/tool-assigned-log'
 import { Route as ToolTypesRouteImport } from './routes/tool-types'
@@ -57,6 +59,16 @@ const MachineHoursRoute = MachineHoursRouteImport.update({
   path: '/machine-hours',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MachinesRoute = MachinesRouteImport.update({
+  id: '/machines',
+  path: '/machines',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MonthlyExpenseRoute = MonthlyExpenseRouteImport.update({
+  id: '/monthly-expense',
+  path: '/monthly-expense',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TimelinessConfigurationRoute = TimelinessConfigurationRouteImport.update({
   id: '/timeliness-configuration',
   path: '/timeliness-configuration',
@@ -91,6 +103,8 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/low-stock': typeof LowStockRoute
   '/machine-hours': typeof MachineHoursRoute
+  '/machines': typeof MachinesRoute
+  '/monthly-expense': typeof MonthlyExpenseRoute
   '/timeliness-configuration': typeof TimelinessConfigurationRoute
   '/tool-assigned-log': typeof ToolAssignedLogRoute
   '/tool-types': typeof ToolTypesRoute
@@ -105,6 +119,8 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/low-stock': typeof LowStockRoute
   '/machine-hours': typeof MachineHoursRoute
+  '/machines': typeof MachinesRoute
+  '/monthly-expense': typeof MonthlyExpenseRoute
   '/timeliness-configuration': typeof TimelinessConfigurationRoute
   '/tool-assigned-log': typeof ToolAssignedLogRoute
   '/tool-types': typeof ToolTypesRoute
@@ -120,6 +136,8 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/low-stock': typeof LowStockRoute
   '/machine-hours': typeof MachineHoursRoute
+  '/machines': typeof MachinesRoute
+  '/monthly-expense': typeof MonthlyExpenseRoute
   '/timeliness-configuration': typeof TimelinessConfigurationRoute
   '/tool-assigned-log': typeof ToolAssignedLogRoute
   '/tool-types': typeof ToolTypesRoute
@@ -136,6 +154,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/low-stock'
     | '/machine-hours'
+    | '/machines'
+    | '/monthly-expense'
     | '/timeliness-configuration'
     | '/tool-assigned-log'
     | '/tool-types'
@@ -150,6 +170,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/low-stock'
     | '/machine-hours'
+    | '/machines'
+    | '/monthly-expense'
     | '/timeliness-configuration'
     | '/tool-assigned-log'
     | '/tool-types'
@@ -164,6 +186,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/low-stock'
     | '/machine-hours'
+    | '/machines'
+    | '/monthly-expense'
     | '/timeliness-configuration'
     | '/tool-assigned-log'
     | '/tool-types'
@@ -179,6 +203,8 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   LowStockRoute: typeof LowStockRoute
   MachineHoursRoute: typeof MachineHoursRoute
+  MachinesRoute: typeof MachinesRoute
+  MonthlyExpenseRoute: typeof MonthlyExpenseRoute
   TimelinessConfigurationRoute: typeof TimelinessConfigurationRoute
   ToolAssignedLogRoute: typeof ToolAssignedLogRoute
   ToolTypesRoute: typeof ToolTypesRoute
@@ -237,6 +263,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MachineHoursRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/machines': {
+      id: '/machines'
+      path: '/machines'
+      fullPath: '/machines'
+      preLoaderRoute: typeof MachinesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/monthly-expense': {
+      id: '/monthly-expense'
+      path: '/monthly-expense'
+      fullPath: '/monthly-expense'
+      preLoaderRoute: typeof MonthlyExpenseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/timeliness-configuration': {
       id: '/timeliness-configuration'
       path: '/timeliness-configuration'
@@ -283,6 +323,8 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   LowStockRoute: LowStockRoute,
   MachineHoursRoute: MachineHoursRoute,
+  MachinesRoute: MachinesRoute,
+  MonthlyExpenseRoute: MonthlyExpenseRoute,
   TimelinessConfigurationRoute: TimelinessConfigurationRoute,
   ToolAssignedLogRoute: ToolAssignedLogRoute,
   ToolTypesRoute: ToolTypesRoute,
