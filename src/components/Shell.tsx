@@ -121,7 +121,7 @@ export function Shell({
                 <img
                   src={techProLogo}
                   alt="TechPro Industries Inc."
-                  className="h-9 w-auto min-w-0 object-contain"
+                  className="h-11 w-auto min-w-0 object-contain"
                 />
               ) : null}
               <Button
@@ -182,7 +182,6 @@ export function Shell({
                   </h1>
                 </div>
                 <div className="flex shrink-0 items-center gap-2 text-sm sm:gap-3">
-                  <span className="hidden text-muted-fg sm:inline">Local draft</span>
                   <DropdownMenu onOpenChange={(open) => open && markNotificationsRead()}>
                     <DropdownMenuTrigger asChild>
                       <Button
