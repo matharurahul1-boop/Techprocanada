@@ -37,7 +37,7 @@ export type MachineHour = {
 export type TimelinessConfiguration = {
   id: string;
   reportName: string;
-  reportTable: "Inventory Assigned" | "Inventory Orders" | "Machining Hours" | "Inventory Items";
+  reportTable: "Inventory Assigned" | "Inventory Orders" | "Machining Hours" | "Inventory Items" | "Low Stock";
   frequency: "Weekly" | "Monthly" | "Quarterly";
   submissionDay: "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday";
   submittedByUserId: string;
@@ -68,6 +68,7 @@ export type ToolAssignment = {
   jobNumber: string;
   drawingNumber: string;
   location: string;
+  machineId: string;
 };
 
 export type StockNotification = {
@@ -179,6 +180,7 @@ const mapAssignment = (r: Tables<"inventory_assigned">): ToolAssignment => ({
   jobNumber: r.job_number ?? "",
   drawingNumber: r.drawing_number ?? "",
   location: r.source_location ?? "",
+  machineId: r.machine_id != null ? String(r.machine_id) : "",
 });
 
 const mapMachine = (r: Tables<"machines">): Machine => ({ id: String(r.id), name: r.name });
@@ -198,6 +200,7 @@ const REPORT_TABLES: TimelinessConfiguration["reportTable"][] = [
   "Inventory Orders",
   "Machining Hours",
   "Inventory Items",
+  "Low Stock",
 ];
 const FREQUENCIES: TimelinessConfiguration["frequency"][] = ["Weekly", "Monthly", "Quarterly"];
 const DAYS: TimelinessConfiguration["submissionDay"][] = [
@@ -819,6 +822,7 @@ export function addAssignment(assignment: Omit<ToolAssignment, "id">): StockNoti
         job_number: assignment.jobNumber || null,
         drawing_number: assignment.drawingNumber || null,
         source_location: assignment.location || null,
+        machine_id: assignment.machineId ? toDbId(assignment.machineId) : null,
       })
       .select("id")
       .single();

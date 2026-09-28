@@ -41,6 +41,7 @@ const reportTables: TimelinessConfiguration["reportTable"][] = [
   "Inventory Orders",
   "Machining Hours",
   "Inventory Items",
+  "Low Stock",
 ];
 const frequencies: TimelinessConfiguration["frequency"][] = ["Weekly", "Monthly", "Quarterly"];
 const submissionDays: TimelinessConfiguration["submissionDay"][] = [

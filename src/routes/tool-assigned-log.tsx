@@ -88,7 +88,7 @@ export const Route = createFileRoute("/tool-assigned-log")({
 });
 
 function ToolAssignedLogPage() {
-  const { assignments, items, toolTypes, users } = useStore();
+  const { assignments, items, toolTypes, users, machines } = useStore();
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [activePreset, setActivePreset] = useState<PresetKey>("all");
@@ -109,6 +109,7 @@ function ToolAssignedLogPage() {
     const itemById = new Map(items.map((item) => [item.id, item]));
     const typeById = new Map(toolTypes.map((toolType) => [toolType.id, toolType.name]));
     const userById = new Map(users.map((user) => [user.id, user.name]));
+    const machineById = new Map(machines.map((machine) => [machine.id, machine.name]));
 
     return assignments
       .map((assignment, sourceIndex) => {
@@ -120,6 +121,7 @@ function ToolAssignedLogPage() {
           toolType: item ? (typeById.get(item.typeId) ?? "Unassigned") : "Unassigned",
           balance: item ? balanceOf(item) : 0,
           recipientName: userById.get(assignment.userId) ?? "Removed user",
+          machineName: assignment.machineId ? (machineById.get(assignment.machineId) ?? "") : "",
         };
       })
       .sort((a, b) => b.issuedDate.localeCompare(a.issuedDate) || a.sourceIndex - b.sourceIndex)
@@ -134,7 +136,7 @@ function ToolAssignedLogPage() {
           row.recipientName.toLowerCase().includes(recipient.trim().toLowerCase())
         );
       });
-  }, [assignments, dateFrom, dateTo, items, quantity, recipient, tool, toolTypes, type, users]);
+  }, [assignments, dateFrom, dateTo, items, machines, quantity, recipient, tool, toolTypes, type, users]);
 
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
@@ -233,7 +235,7 @@ function ToolAssignedLogPage() {
               <span className="text-right">Issued</span>
               <span className="text-right">Balance</span>
               <span>Issued to</span>
-              <span>Location</span>
+              <span>Location / Machine</span>
             </div>
 
             {visibleRows.length === 0 ? (
@@ -257,15 +259,19 @@ function ToolAssignedLogPage() {
                       <span className="grid size-7 shrink-0 place-items-center rounded-full bg-chip text-[10px] font-bold text-accent-brand">{row.recipientName.charAt(0).toUpperCase()}</span>
                       <span className="truncate text-[13px]">{row.recipientName}</span>
                     </div>
-                    <span className="hidden truncate text-[12px] text-muted-fg lg:block">{row.location || "—"}</span>
+                    <span className="hidden truncate text-[12px] text-muted-fg lg:block">
+                      {[row.location, row.machineName].filter(Boolean).join(" · ") || "—"}
+                    </span>
                     <div className="mt-2 flex items-center gap-4 lg:hidden">
                       <div><p className="text-[10px] uppercase text-muted-fg">Date</p><p className="font-mono text-[11px]">{formatDate(row.issuedDate)}</p></div>
                       <div><p className="text-[10px] uppercase text-muted-fg">Issued</p><p className="font-mono text-[11px] font-semibold">{row.qtyIssued}</p></div>
                       <div><p className="text-[10px] uppercase text-muted-fg">Balance</p><p className="font-mono text-[11px] font-semibold">{row.balance}</p></div>
                     </div>
                     <p className="mt-2 text-[12px] lg:hidden">Issued to <span className="font-semibold">{row.recipientName}</span> from {row.issuedFrom}</p>
-                    {row.location && (
-                      <p className="mt-1 text-[12px] text-muted-fg lg:hidden">Location: {row.location}</p>
+                    {(row.location || row.machineName) && (
+                      <p className="mt-1 text-[12px] text-muted-fg lg:hidden">
+                        {[row.location, row.machineName].filter(Boolean).join(" · ")}
+                      </p>
                     )}
                   </article>
                 ))}

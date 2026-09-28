@@ -79,19 +79,21 @@ async function inventoryAssignedReport(db: Db, period: Period): Promise<ReportRe
 
   return {
     columns: [
-      { header: "Item", width: 130 },
-      { header: "Type", width: 80 },
-      { header: "Issued to", width: 70 },
-      { header: "Location", width: 90 },
-      { header: "Issued date", width: 65 },
-      { header: "Qty issued", width: 45 },
-      { header: "Job #", width: 55 },
+      { header: "Item", width: 115 },
+      { header: "Type", width: 70 },
+      { header: "Issued to", width: 60 },
+      { header: "Location", width: 75 },
+      { header: "Machine", width: 65 },
+      { header: "Issued date", width: 60 },
+      { header: "Qty issued", width: 40 },
+      { header: "Job #", width: 45 },
     ],
     rows: (assignedRes.data ?? []).map((a) => [
       a.item_id != null ? (lookups.itemName.get(a.item_id) ?? `#${a.item_id}`) : "-",
       a.item_id != null ? (lookups.itemType.get(a.item_id) ?? "-") : "-",
       a.user_id != null ? (lookups.userName.get(a.user_id) ?? `#${a.user_id}`) : "-",
       a.source_location ?? "-",
+      a.machine_id != null ? (lookups.machineName.get(a.machine_id) ?? "-") : "-",
       a.issued_date ?? "-",
       String(a.qty_issued),
       a.job_number ?? "-",
@@ -116,6 +118,35 @@ async function inventoryItemsReport(db: Db): Promise<ReportResult> {
       { header: "Threshold", width: 50 },
     ],
     rows: (itemsRes.data ?? []).map((i) => [
+      i.name,
+      i.type_id != null ? (lookups.itemType.get(i.id) ?? "-") : "-",
+      String(i.ordered),
+      String(i.issued),
+      String(i.ordered - i.issued),
+      String(i.threshold),
+    ]),
+  };
+}
+
+async function lowStockReport(db: Db): Promise<ReportResult> {
+  const [lookups, itemsRes] = await Promise.all([
+    loadLookups(db),
+    db.from("inventory_items").select("*").order("name"),
+  ]);
+  if (itemsRes.error) throw new Error(itemsRes.error.message);
+
+  const lowStockItems = (itemsRes.data ?? []).filter((i) => i.ordered - i.issued < i.threshold);
+
+  return {
+    columns: [
+      { header: "Item", width: 190 },
+      { header: "Type", width: 110 },
+      { header: "Ordered", width: 55 },
+      { header: "Issued", width: 55 },
+      { header: "Balance", width: 55 },
+      { header: "Threshold", width: 50 },
+    ],
+    rows: lowStockItems.map((i) => [
       i.name,
       i.type_id != null ? (lookups.itemType.get(i.id) ?? "-") : "-",
       String(i.ordered),
@@ -168,6 +199,8 @@ export async function buildReport(
       return inventoryAssignedReport(db, period);
     case "Inventory Items":
       return inventoryItemsReport(db);
+    case "Low Stock":
+      return lowStockReport(db);
     case "Machining Hours":
       return machiningHoursReport(db, period);
     default:

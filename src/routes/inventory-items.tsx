@@ -41,7 +41,7 @@ export const Route = createFileRoute("/inventory-items")({
 });
 
 function InventoryItemsPage() {
-  const { toolTypes, items, brands, orders, users, assignments } = useStore();
+  const { toolTypes, items, brands, orders, users, assignments, machines } = useStore();
   const [orderItemId, setOrderItemId] = useState<string | null>(null);
   const [assignItemId, setAssignItemId] = useState<string | null>(null);
   const [issuedTo, setIssuedTo] = useState("");
@@ -53,6 +53,7 @@ function InventoryItemsPage() {
   const [jobNumber, setJobNumber] = useState("");
   const [drawingNumber, setDrawingNumber] = useState("");
   const [location, setLocation] = useState("");
+  const [assignMachineId, setAssignMachineId] = useState("");
   const [purchaseDate, setPurchaseDate] = useState("");
   const [brandId, setBrandId] = useState("");
   const [orderQty, setOrderQty] = useState("");
@@ -143,6 +144,7 @@ function InventoryItemsPage() {
 
   const typeName = (id: string) => toolTypes.find((t) => t.id === id)?.name ?? "Unassigned";
   const brandName = (id: string) => brands.find((b) => b.id === id)?.name ?? "Unassigned";
+  const machineName = (id: string) => machines.find((m) => m.id === id)?.name ?? "";
 
   const orderItem = items.find((i) => i.id === orderItemId) ?? null;
   const selectedBrand = brandId || brands[0]?.id || "";
@@ -191,6 +193,7 @@ function InventoryItemsPage() {
     setJobNumber("");
     setDrawingNumber("");
     setLocation("");
+    setAssignMachineId("");
   };
 
   const submitAssign = (e: React.FormEvent) => {
@@ -207,6 +210,7 @@ function InventoryItemsPage() {
       jobNumber,
       drawingNumber,
       location,
+      machineId: assignMachineId,
     });
     if (notification) {
       const isCritical = notification.level === "critical";
@@ -221,6 +225,7 @@ function InventoryItemsPage() {
     setJobNumber("");
     setDrawingNumber("");
     setLocation("");
+    setAssignMachineId("");
   };
 
   return (
@@ -716,6 +721,28 @@ function InventoryItemsPage() {
             className={`${fieldClass} mb-4`}
           />
 
+          <label className={labelClass} htmlFor="assign-machine">
+            Machine
+          </label>
+          <div className="relative mb-4">
+            <select
+              id="assign-machine"
+              value={assignMachineId}
+              onChange={(e) => setAssignMachineId(e.target.value)}
+              className={`${fieldClass} appearance-none pr-9`}
+            >
+              <option value="">No machine</option>
+              {machines.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+            <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs text-muted-fg">
+              ▾
+            </span>
+          </div>
+
           <div className="mb-4 grid grid-cols-2 gap-3">
             <div>
               <label className={labelClass} htmlFor="issued-date">
@@ -835,8 +862,12 @@ function InventoryItemsPage() {
                         {a.drawingNumber}
                       </p>
                     )}
-                    {a.location && (
-                      <p className="truncate font-mono text-[11px] text-muted-fg">{a.location}</p>
+                    {(a.location || a.machineId) && (
+                      <p className="truncate font-mono text-[11px] text-muted-fg">
+                        {a.location}
+                        {a.location && a.machineId ? " · " : ""}
+                        {machineName(a.machineId)}
+                      </p>
                     )}
                     {a.remarks && (
                       <p className="text-[11px] text-muted-fg">{a.remarks}</p>
