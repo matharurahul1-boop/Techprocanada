@@ -22,7 +22,6 @@ import {
   Tags,
   Users,
   TriangleAlert,
-  Wrench,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
@@ -56,7 +55,7 @@ const navItems = [
     short: "Withdrawal",
     icon: ClipboardList,
   },
-  { to: "/machine-hours", long: "Machining Hours", short: "Machining", icon: Wrench },
+  // "/machine-hours" temporarily hidden from the menu; route stays live.
   { to: "/machines", long: "Machines", short: "Machines", icon: Cog },
   {
     to: "/timeliness-configuration",
@@ -81,7 +80,6 @@ const mobileMoreItems = [
   navItems[11],
   navItems[12],
   navItems[13],
-  navItems[14],
 ] as const;
 
 export function Shell({
