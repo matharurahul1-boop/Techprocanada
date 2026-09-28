@@ -8,7 +8,11 @@ type AuthContextValue = {
   user: User | null;
   status: "loading" | "signed-in" | "signed-out";
   signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUpWithPassword: (email: string, password: string) => Promise<{ error: string | null; needsEmailConfirmation: boolean }>;
+  signUpWithPassword: (
+    email: string,
+    password: string,
+    name: string,
+  ) => Promise<{ error: string | null; needsEmailConfirmation: boolean }>;
   signOut: () => Promise<void>;
 };
 
@@ -33,12 +37,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signInWithPassword: AuthContextValue["signInWithPassword"] = async (email, password) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error?.message ?? null };
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { error: error.message };
+
+    const { data: appUser } = await supabase
+      .from("app_users")
+      .select("is_active")
+      .eq("auth_user_id", data.user.id)
+      .maybeSingle();
+
+    if (appUser && !appUser.is_active) {
+      await supabase.auth.signOut();
+      return { error: "This account has been deactivated. Contact an admin for access." };
+    }
+
+    return { error: null };
   };
 
-  const signUpWithPassword: AuthContextValue["signUpWithPassword"] = async (email, password) => {
-    const { data, error } = await supabase.auth.signUp({ email, password });
+  const signUpWithPassword: AuthContextValue["signUpWithPassword"] = async (email, password, name) => {
+    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { name } } });
     return {
       error: error?.message ?? null,
       needsEmailConfirmation: !error && !data.session,

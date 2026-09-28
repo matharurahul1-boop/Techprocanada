@@ -4,7 +4,7 @@ import { Trash2 } from "lucide-react";
 import { Shell, fieldClass, labelClass } from "@/components/Shell";
 import { AddButton, Sheet } from "@/components/Sheet";
 
-import { addUser, removeUser, useStore } from "@/lib/store";
+import { addUser, removeUser, setUserActive, useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/users")({
   head: () => ({
@@ -87,12 +87,34 @@ function UsersPage() {
               return (
                 <div
                   key={user.id}
-                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3.5"
+                  className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 px-4 py-3.5"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{user.name}</p>
-                    <p className="font-mono text-[12px] text-muted-fg">{count} assignments</p>
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-sm font-semibold">{user.name}</p>
+                      {!user.isActive && (
+                        <span className="shrink-0 rounded-full bg-warn-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warn">
+                          Deactivated
+                        </span>
+                      )}
+                    </div>
+                    <p className="font-mono text-[12px] text-muted-fg">
+                      {count} assignments
+                      {user.hasLogin && user.email ? ` · ${user.email}` : !user.hasLogin ? " · no login" : ""}
+                    </p>
                   </div>
+                  {user.hasLogin && (
+                    <button
+                      onClick={() => setUserActive(user.id, !user.isActive)}
+                      className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] font-semibold transition ${
+                        user.isActive
+                          ? "bg-warn-soft text-warn hover:brightness-95"
+                          : "bg-emerald-500/15 text-emerald-600 hover:brightness-95"
+                      }`}
+                    >
+                      {user.isActive ? "Deactivate" : "Activate"}
+                    </button>
+                  )}
                   <button
                     onClick={() => removeUser(user.id)}
                     aria-label={`Remove ${user.name}`}

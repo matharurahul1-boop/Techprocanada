@@ -26,6 +26,7 @@ function LoginPage() {
   const search = Route.useSearch();
 
   const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -50,7 +51,7 @@ function LoginPage() {
   const handleSignUp = async (event: FormEvent) => {
     event.preventDefault();
     setSubmitting(true);
-    const { error, needsEmailConfirmation } = await signUpWithPassword(email, password);
+    const { error, needsEmailConfirmation } = await signUpWithPassword(email, password, name.trim());
     setSubmitting(false);
     if (error) {
       toast.error(error);
@@ -111,6 +112,17 @@ function LoginPage() {
 
             <TabsContent value="signup">
               <form className="space-y-4" onSubmit={handleSignUp}>
+                <div className="space-y-1.5">
+                  <Label htmlFor="signup-name">Full name</Label>
+                  <Input
+                    id="signup-name"
+                    type="text"
+                    autoComplete="name"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="signup-email">Email</Label>
                   <Input

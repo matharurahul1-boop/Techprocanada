@@ -39,9 +39,30 @@ export type Database = {
         Relationships: []
       }
       app_users: {
-        Row: { id: number; name: string; email: string | null; created_at: string | null }
-        Insert: { id?: number; name: string; email?: string | null; created_at?: string | null }
-        Update: { id?: number; name?: string; email?: string | null; created_at?: string | null }
+        Row: {
+          id: number
+          name: string
+          email: string | null
+          created_at: string | null
+          auth_user_id: string | null
+          is_active: boolean
+        }
+        Insert: {
+          id?: number
+          name: string
+          email?: string | null
+          created_at?: string | null
+          auth_user_id?: string | null
+          is_active?: boolean
+        }
+        Update: {
+          id?: number
+          name?: string
+          email?: string | null
+          created_at?: string | null
+          auth_user_id?: string | null
+          is_active?: boolean
+        }
         Relationships: []
       }
       inventory_items: {

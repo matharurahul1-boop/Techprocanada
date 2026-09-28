@@ -54,7 +54,7 @@ export type ToolOrder = {
   confirmed?: boolean;
 };
 
-export type User = { id: string; name: string };
+export type User = { id: string; name: string; email: string | null; isActive: boolean; hasLogin: boolean };
 
 export type ToolAssignment = {
   id: string;
@@ -136,7 +136,13 @@ function reportError(action: string, error: { message: string }) {
 const mapToolType = (r: Tables<"tool_types">): ToolType => ({ id: String(r.id), name: r.name });
 const mapBrand = (r: Tables<"brands">): Brand => ({ id: String(r.id), name: r.name });
 const mapCompany = (r: Tables<"companies">): Company => ({ id: String(r.id), name: r.name });
-const mapUser = (r: Tables<"app_users">): User => ({ id: String(r.id), name: r.name });
+const mapUser = (r: Tables<"app_users">): User => ({
+  id: String(r.id),
+  name: r.name,
+  email: r.email,
+  isActive: r.is_active,
+  hasLogin: r.auth_user_id != null,
+});
 
 const mapItem = (r: Tables<"inventory_items">): InventoryItem => ({
   id: String(r.id),
@@ -718,7 +724,10 @@ export function updateOrder(id: string, patch: Partial<Pick<ToolOrder, "confirme
 
 export function addUser(name: string) {
   const tempId = uid();
-  state = { ...state, users: [...state.users, { id: tempId, name }] };
+  state = {
+    ...state,
+    users: [...state.users, { id: tempId, name, email: null, isActive: true, hasLogin: false }],
+  };
   persist();
   emit();
   void (async () => {
@@ -731,6 +740,21 @@ export function addUser(name: string) {
     persist();
     emit();
   })();
+}
+
+export function setUserActive(id: string, isActive: boolean) {
+  state = {
+    ...state,
+    users: state.users.map((u) => (u.id === id ? { ...u, isActive } : u)),
+  };
+  persist();
+  emit();
+  if (!isSavedId(id)) return;
+  void supabase
+    .from("app_users")
+    .update({ is_active: isActive })
+    .eq("id", toDbId(id))
+    .then(({ error }) => error && reportError("Update user status", error));
 }
 
 export function removeUser(id: string) {
