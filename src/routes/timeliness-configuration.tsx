@@ -15,6 +15,7 @@ import {
 } from "@/lib/store";
 import { generateReportNow, getReportDownloadUrl, listReports } from "@/lib/reports/actions.functions";
 import type { Tables } from "@/integrations/supabase/types";
+import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/timeliness-configuration")({
   head: () => ({
@@ -64,6 +65,7 @@ const emptyForm = {
 
 function TimelinessConfigurationPage() {
   const { timelinessConfigurations, users } = useStore();
+  const { status } = useAuth();
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -83,8 +85,11 @@ function TimelinessConfigurationPage() {
   };
 
   useEffect(() => {
+    // Server functions need a Supabase session attached to the request; firing
+    // before auth finishes loading sends no Authorization header and 401s.
+    if (status !== "signed-in") return;
     refreshReports();
-  }, []);
+  }, [status]);
 
   const generateNow = async (configuration: TimelinessConfiguration) => {
     setGeneratingId(configuration.id);
