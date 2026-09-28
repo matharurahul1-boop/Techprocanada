@@ -1,4 +1,4 @@
-const CACHE = "techpro-shell-v1";
+const CACHE = "techpro-shell-v2";
 const APP_SHELL = ["/", "/manifest.webmanifest", "/favicon.png"];
 
 self.addEventListener("install", (event) => {
