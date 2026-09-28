@@ -40,6 +40,7 @@ const navItems = [
   { to: "/company", long: "Company", short: "Company", icon: Building2 },
   { to: "/users", long: "Users", short: "Users", icon: Users },
   { to: "/inventory-items", long: "Inventory Items", short: "Items", icon: PackageSearch },
+  { to: "/low-stock", long: "Low Stock", short: "Low Stock", icon: TriangleAlert },
   { to: "/tools-order-log", long: "Tools Order Log", short: "Orders", icon: ShoppingCart },
   { to: "/tool-assigned-log", long: "Tool Assigned Log", short: "Log", icon: ClipboardList },
   { to: "/machine-hours", long: "Machining Hours", short: "Machining", icon: Wrench },
@@ -51,14 +52,15 @@ const navItems = [
   },
 ] as const;
 
-const mobileDockItems = [navItems[0], navItems[1], navItems[5], navItems[6]] as const;
+const mobileDockItems = [navItems[0], navItems[1], navItems[5], navItems[7]] as const;
 const mobileMoreItems = [
   navItems[2],
   navItems[3],
   navItems[4],
-  navItems[7],
+  navItems[6],
   navItems[8],
   navItems[9],
+  navItems[10],
 ] as const;
 
 export function Shell({
