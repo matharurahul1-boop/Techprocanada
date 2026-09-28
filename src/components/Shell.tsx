@@ -137,7 +137,7 @@ export function Shell({
   };
 
   return (
-    <div className="min-h-screen bg-canvas text-ink antialiased">
+    <div className="min-h-screen overflow-x-hidden bg-canvas text-ink antialiased">
       <div className="relative w-full">
         <div className="relative flex min-h-screen flex-col lg:flex-row lg:gap-0">
           <aside

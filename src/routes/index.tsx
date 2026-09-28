@@ -73,7 +73,7 @@ function DashboardPage() {
               <div className="mt-8 space-y-5">
                 {movement.map((item) => (
                   <div key={item.id} className="grid grid-cols-[minmax(6rem,10rem)_minmax(0,1fr)_2.5rem] items-center gap-3">
-                    <p className="truncate text-xs font-medium" title={item.name}>{item.name}</p>
+                    <p className="min-w-0 truncate text-xs font-medium" title={item.name}>{item.name}</p>
                     <div className="space-y-1.5">
                       <div className="h-2 overflow-hidden rounded-full bg-chip"><div className="h-full rounded-full bg-accent-brand transition-all" style={{ width: `${(item.ordered / maxMovement) * 100}%` }} /></div>
                       <div className="h-2 overflow-hidden rounded-full bg-chip"><div className="h-full rounded-full bg-good transition-all" style={{ width: `${(item.issued / maxMovement) * 100}%` }} /></div>
