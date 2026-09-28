@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Shell } from "@/components/Shell";
+import { Pagination } from "@/components/Pagination";
 
 import { removeUser, setUserActive, useStore } from "@/lib/store";
 
@@ -99,44 +100,14 @@ function UsersPage() {
             })}
           </div>
 
-          {pageCount > 1 && (
-            <nav aria-label="Users pages" className="mt-4 flex items-center justify-center gap-2">
-              <button
-                type="button"
-                onClick={() => setPage((value) => Math.max(1, value - 1))}
-                disabled={currentPage === 1}
-                aria-label="Previous page"
-                className="grid size-9 place-items-center rounded-full bg-panel text-muted-fg ring-1 ring-line transition hover:text-ink disabled:opacity-35"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              {Array.from({ length: pageCount }, (_, index) => index + 1).map((pageNumber) => (
-                <button
-                  key={pageNumber}
-                  type="button"
-                  onClick={() => setPage(pageNumber)}
-                  aria-label={`Page ${pageNumber}`}
-                  aria-current={currentPage === pageNumber ? "page" : undefined}
-                  className={`grid size-9 place-items-center rounded-full text-[12px] font-semibold ring-1 transition ${
-                    currentPage === pageNumber
-                      ? "bg-accent-brand text-accent-brand-ink ring-accent-brand"
-                      : "bg-panel text-muted-fg ring-line hover:text-ink"
-                  }`}
-                >
-                  {pageNumber}
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => setPage((value) => Math.min(pageCount, value + 1))}
-                disabled={currentPage === pageCount}
-                aria-label="Next page"
-                className="grid size-9 place-items-center rounded-full bg-panel text-muted-fg ring-1 ring-line transition hover:text-ink disabled:opacity-35"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </nav>
-          )}
+          <Pagination
+            page={currentPage}
+            pageCount={pageCount}
+            onPageChange={setPage}
+            totalCount={users.length}
+            pageSize={PAGE_SIZE}
+            itemLabel="users"
+          />
         </section>
       </div>
     </Shell>

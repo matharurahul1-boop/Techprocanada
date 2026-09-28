@@ -4,7 +4,10 @@ import { Pencil, Trash2 } from "lucide-react";
 
 import { Shell, fieldClass, labelClass } from "@/components/Shell";
 import { AddButton, Sheet } from "@/components/Sheet";
+import { Pagination } from "@/components/Pagination";
 import { addCompany, removeCompany, updateCompany, useStore } from "@/lib/store";
+
+const PAGE_SIZE = 20;
 
 export const Route = createFileRoute("/company")({
   head: () => ({
@@ -31,6 +34,11 @@ function CompanyPage() {
   const [name, setName] = useState("");
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+
+  const pageCount = Math.max(1, Math.ceil(companies.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const visibleCompanies = companies.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const openNew = () => {
     setEditId(null);
@@ -102,7 +110,7 @@ function CompanyPage() {
                 No companies yet. Add your first one.
               </p>
             )}
-            {companies.map((company) => (
+            {visibleCompanies.map((company) => (
               <div
                 key={company.id}
                 className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3.5"
@@ -129,6 +137,15 @@ function CompanyPage() {
               </div>
             ))}
           </div>
+
+          <Pagination
+            page={currentPage}
+            pageCount={pageCount}
+            onPageChange={setPage}
+            totalCount={companies.length}
+            pageSize={PAGE_SIZE}
+            itemLabel="companies"
+          />
         </section>
       </div>
     </Shell>

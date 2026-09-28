@@ -4,7 +4,10 @@ import { useState } from "react";
 
 import { Shell, fieldClass, labelClass } from "@/components/Shell";
 import { AddButton, Sheet } from "@/components/Sheet";
+import { Pagination } from "@/components/Pagination";
 import { addToolType, removeToolType, updateToolType, useStore } from "@/lib/store";
+
+const PAGE_SIZE = 20;
 
 export const Route = createFileRoute("/tool-types")({
   head: () => ({
@@ -25,6 +28,11 @@ function ToolTypesPage() {
   const [name, setName] = useState("");
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+
+  const pageCount = Math.max(1, Math.ceil(toolTypes.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const visibleTypes = toolTypes.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const openNew = () => {
     setEditId(null);
@@ -73,7 +81,7 @@ function ToolTypesPage() {
           </div>
           <div className="glass-surface divide-y divide-line overflow-hidden rounded-2xl border shadow-xl shadow-accent-brand/5">
             {toolTypes.length === 0 && <p className="px-4 py-8 text-center text-sm text-muted-fg">No tool types yet. Add your first one.</p>}
-            {toolTypes.map((type) => {
+            {visibleTypes.map((type) => {
               const count = items.filter((item) => item.typeId === type.id).length;
               return (
                 <div key={type.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3.5">
@@ -89,6 +97,15 @@ function ToolTypesPage() {
               );
             })}
           </div>
+
+          <Pagination
+            page={currentPage}
+            pageCount={pageCount}
+            onPageChange={setPage}
+            totalCount={toolTypes.length}
+            pageSize={PAGE_SIZE}
+            itemLabel="types"
+          />
         </section>
       </div>
     </Shell>

@@ -3,8 +3,11 @@ import { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { Shell, fieldClass, labelClass } from "@/components/Shell";
 import { AddButton, Sheet } from "@/components/Sheet";
+import { Pagination } from "@/components/Pagination";
 
 import { addBrand, removeBrand, updateBrand, useStore } from "@/lib/store";
+
+const PAGE_SIZE = 20;
 
 export const Route = createFileRoute("/brand")({
   head: () => ({
@@ -32,6 +35,11 @@ function BrandPage() {
   const [name, setName] = useState("");
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+
+  const pageCount = Math.max(1, Math.ceil(brands.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const visibleBrands = brands.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const openNew = () => {
     setEditId(null);
@@ -101,7 +109,7 @@ function BrandPage() {
                 No brands yet. Add your first one.
               </p>
             )}
-            {brands.map((brand) => {
+            {visibleBrands.map((brand) => {
               const count = orders.filter((o) => o.brandId === brand.id).length;
               return (
                 <div
@@ -134,6 +142,15 @@ function BrandPage() {
               );
             })}
           </div>
+
+          <Pagination
+            page={currentPage}
+            pageCount={pageCount}
+            onPageChange={setPage}
+            totalCount={brands.length}
+            pageSize={PAGE_SIZE}
+            itemLabel="brands"
+          />
         </section>
       </div>
     </Shell>

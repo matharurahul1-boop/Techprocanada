@@ -1,9 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Search, TriangleAlert } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Shell, fieldClass } from "@/components/Shell";
+import { Pagination } from "@/components/Pagination";
 import { balanceOf, useStore } from "@/lib/store";
+
+const PAGE_SIZE = 20;
 
 export const Route = createFileRoute("/low-stock")({
   head: () => ({
@@ -29,6 +32,7 @@ function LowStockPage() {
   const { items, toolTypes } = useStore();
   const [search, setSearch] = useState("");
   const [filterTypeId, setFilterTypeId] = useState("all");
+  const [page, setPage] = useState(1);
 
   const typeName = (id: string) => toolTypes.find((t) => t.id === id)?.name ?? "Unassigned";
 
@@ -40,6 +44,12 @@ function LowStockPage() {
 
   const essentialCount = lowItems.filter((item) => item.essential).length;
   const filtersActive = search.trim() !== "" || filterTypeId !== "all";
+
+  const pageCount = Math.max(1, Math.ceil(lowItems.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const visibleItems = lowItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  useEffect(() => setPage(1), [search, filterTypeId]);
 
   return (
     <Shell eyebrow="Stock health" title="Low Stock">
@@ -108,7 +118,7 @@ function LowStockPage() {
               </div>
             ) : (
               <div className="divide-y divide-line">
-                {lowItems.map((item) => {
+                {visibleItems.map((item) => {
                   const balance = balanceOf(item);
                   const critical = balance < 0;
                   return (
@@ -164,6 +174,15 @@ function LowStockPage() {
               </div>
             )}
           </div>
+
+          <Pagination
+            page={currentPage}
+            pageCount={pageCount}
+            onPageChange={setPage}
+            totalCount={lowItems.length}
+            pageSize={PAGE_SIZE}
+            itemLabel="items"
+          />
 
           <Link
             to="/inventory-items"

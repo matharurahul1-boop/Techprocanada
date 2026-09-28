@@ -1,10 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Search, Trash2, X } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { Shell, fieldClass, labelClass } from "@/components/Shell";
 import { AddButton, Sheet } from "@/components/Sheet";
+import { Pagination } from "@/components/Pagination";
 import { addMachineHour, removeMachineHour, useStore } from "@/lib/store";
+
+const PAGE_SIZE = 20;
 
 export const Route = createFileRoute("/machine-hours")({
   head: () => ({
@@ -40,6 +43,7 @@ function MachineHoursPage() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
 
   const machineName = (id: string) => machines.find((m) => m.id === id)?.name ?? "Unassigned";
   const operatorName = (id: string) => users.find((u) => u.id === id)?.name ?? "Unassigned";
@@ -55,6 +59,12 @@ function MachineHoursPage() {
   });
 
   const totalHours = filteredEntries.reduce((sum, entry) => sum + entry.hours, 0);
+
+  const pageCount = Math.max(1, Math.ceil(filteredEntries.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const visibleEntries = filteredEntries.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  useEffect(() => setPage(1), [search]);
 
   const openNew = () => {
     setForm({ ...emptyForm, machineId: machines[0]?.id ?? "", operatorId: users[0]?.id ?? "" });
@@ -248,7 +258,7 @@ function MachineHoursPage() {
                     : "No entries match this search."}
                 </p>
               )}
-              {filteredEntries.map((entry) => (
+              {visibleEntries.map((entry) => (
                 <div
                   key={entry.id}
                   className="px-4 py-3.5 transition-colors hover:bg-panel/40 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem_6rem_8rem_3rem] lg:items-center lg:gap-4"
@@ -299,6 +309,15 @@ function MachineHoursPage() {
               ))}
             </div>
           </div>
+
+          <Pagination
+            page={currentPage}
+            pageCount={pageCount}
+            onPageChange={setPage}
+            totalCount={filteredEntries.length}
+            pageSize={PAGE_SIZE}
+            itemLabel="entries"
+          />
         </section>
       </div>
     </Shell>

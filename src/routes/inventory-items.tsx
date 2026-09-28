@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pencil, Search, ShoppingCart, Trash2, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Shell, fieldClass, labelClass } from "@/components/Shell";
 import { AddButton, Sheet, SideSheet } from "@/components/Sheet";
+import { Pagination } from "@/components/Pagination";
 
 import {
   addAssignment,
@@ -80,6 +81,7 @@ function InventoryItemsPage() {
   const [balanceFilter, setBalanceFilter] = useState<"all" | "below" | "threshold" | "above">(
     routeSearch.balance ?? "all",
   );
+  const [page, setPage] = useState(1);
 
 
   const orderedNum = Number(ordered) || 0;
@@ -99,6 +101,13 @@ function InventoryItemsPage() {
     return matchesSearch && matchesType && matchesBalance;
   });
   const filtersActive = search.trim() !== "" || filterTypeId !== "all" || balanceFilter !== "all";
+
+  const PAGE_SIZE = 20;
+  const pageCount = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const visibleItems = filteredItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  useEffect(() => setPage(1), [search, filterTypeId, balanceFilter]);
 
   const resetForm = () => {
     setName("");
@@ -446,7 +455,7 @@ function InventoryItemsPage() {
                   {items.length === 0 ? "No items logged yet." : "No items match these filters."}
                 </p>
               )}
-              {filteredItems.map((item) => {
+              {visibleItems.map((item) => {
                 const itemBalance = balanceOf(item);
                 const balanceTone = itemBalance < item.threshold
                   ? "bg-destructive/15 text-destructive ring-destructive/25"
@@ -547,6 +556,14 @@ function InventoryItemsPage() {
             </div>
           </div>
 
+          <Pagination
+            page={currentPage}
+            pageCount={pageCount}
+            onPageChange={setPage}
+            totalCount={filteredItems.length}
+            pageSize={PAGE_SIZE}
+            itemLabel="items"
+          />
         </section>
       </div>
 
