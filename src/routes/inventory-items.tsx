@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Pencil, Search, Trash2, X } from "lucide-react";
+import { Pencil, Search, ShoppingCart, Trash2, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Shell, fieldClass, labelClass } from "@/components/Shell";
@@ -492,15 +492,19 @@ function InventoryItemsPage() {
                     <div className="mt-3 flex items-center justify-end gap-1.5 lg:mt-0 lg:justify-self-end">
                         <button
                           onClick={() => openOrder(item.id)}
-                          className="shrink-0 rounded-full bg-chip px-3 py-1.5 text-[11px] font-semibold text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
+                          aria-label={`Order ${item.name}`}
+                          title="Order"
+                          className="grid size-8 shrink-0 place-items-center rounded-full bg-chip text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
                         >
-                          Order
+                          <ShoppingCart size={14} />
                         </button>
                         <button
                           onClick={() => openAssign(item.id)}
-                          className="shrink-0 rounded-full bg-chip px-3 py-1.5 text-[11px] font-semibold text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
+                          aria-label={`Assign ${item.name}`}
+                          title="Assign"
+                          className="grid size-8 shrink-0 place-items-center rounded-full bg-chip text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
                         >
-                          Assign
+                          <UserPlus size={14} />
                         </button>
                         <button
                           onClick={() => openEdit(item)}
