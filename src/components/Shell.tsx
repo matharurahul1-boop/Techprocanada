@@ -3,11 +3,13 @@ import {
   Building2,
   Bell,
   CalendarClock,
+  ChevronDown,
   ClipboardList,
   CircleDollarSign,
   Cog,
   DollarSign,
   LayoutDashboard,
+  Layers,
   LogOut,
   Moon,
   PackageSearch,
@@ -48,6 +50,12 @@ const navItems = [
   { to: "/monthly-expense", long: "Monthly Expense", short: "Expense", icon: DollarSign },
   { to: "/fill-amount", long: "Fill Amount", short: "Fill Amt", icon: CircleDollarSign },
   { to: "/tool-assigned-log", long: "Tool Assigned Log", short: "Log", icon: ClipboardList },
+  {
+    to: "/tool-stock-withdrawal-log",
+    long: "Tool Stock Withdrawal Log",
+    short: "Withdrawal",
+    icon: ClipboardList,
+  },
   { to: "/machine-hours", long: "Machining Hours", short: "Machining", icon: Wrench },
   { to: "/machines", long: "Machines", short: "Machines", icon: Cog },
   {
@@ -57,6 +65,9 @@ const navItems = [
     icon: CalendarClock,
   },
 ] as const;
+
+// These live inside the collapsible "Tools" group in the desktop sidebar.
+const TOOLS_GROUP_PATHS = new Set<string>(["/tool-types", "/brand", "/company", "/users", "/machines"]);
 
 const mobileDockItems = [navItems[0], navItems[1], navItems[5], navItems[7]] as const;
 const mobileMoreItems = [
@@ -70,6 +81,7 @@ const mobileMoreItems = [
   navItems[11],
   navItems[12],
   navItems[13],
+  navItems[14],
 ] as const;
 
 export function Shell({
@@ -85,12 +97,18 @@ export function Shell({
 }) {
   const [isNight, setIsNight] = useState(false);
   const [isMenuExpanded, setIsMenuExpanded] = useState(true);
+  const [isToolsGroupOpen, setIsToolsGroupOpen] = useState(false);
   const { notifications } = useStore();
   const { user, signOut } = useAuth();
   const push = usePushNotifications();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const isMoreActive = mobileMoreItems.some((item) => pathname === item.to);
+  const isToolsGroupActive = TOOLS_GROUP_PATHS.has(pathname);
   const unreadCount = notifications.filter((notification) => !notification.read).length;
+
+  useEffect(() => {
+    if (isToolsGroupActive) setIsToolsGroupOpen(true);
+  }, [isToolsGroupActive]);
 
   const formatNotificationTime = (value: string) => {
     const date = new Date(value);
@@ -153,25 +171,79 @@ export function Shell({
             </div>
 
             <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    activeOptions={{ exact: item.to === "/" }}
-                    className={`flex min-w-0 flex-none flex-row items-center justify-center rounded-xl border border-transparent py-2.5 text-sm font-medium text-muted-fg transition hover:border-glass-border hover:bg-panel/70 hover:text-ink ${isMenuExpanded ? "justify-start gap-3 px-3 text-left" : "px-2"}`}
-                    activeProps={{
-                      className:
-                        "brand-gradient border-glass-border text-accent-brand-ink font-semibold shadow-lg shadow-accent-brand/30",
-                    }}
-                    title={!isMenuExpanded ? item.long : undefined}
-                  >
-                    <Icon className="size-4 shrink-0" strokeWidth={1.9} aria-hidden="true" />
-                    <span className={isMenuExpanded ? "inline" : "hidden"}>{item.long}</span>
-                  </Link>
-                );
-              })}
+              {(() => {
+                let toolsGroupRendered = false;
+                return navItems.map((item) => {
+                  if (TOOLS_GROUP_PATHS.has(item.to)) {
+                    if (toolsGroupRendered) return null;
+                    toolsGroupRendered = true;
+                    const toolsItems = navItems.filter((entry) => TOOLS_GROUP_PATHS.has(entry.to));
+                    return (
+                      <div key="tools-group" className="flex flex-col gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setIsToolsGroupOpen((value) => !value)}
+                          className={`flex min-w-0 flex-none flex-row items-center rounded-xl border border-transparent py-2.5 text-sm font-medium transition hover:border-glass-border hover:bg-panel/70 hover:text-ink ${isMenuExpanded ? "justify-start gap-3 px-3 text-left" : "justify-center px-2"} ${isToolsGroupActive ? "text-ink" : "text-muted-fg"}`}
+                          title={!isMenuExpanded ? "Tools" : undefined}
+                        >
+                          <Layers className="size-4 shrink-0" strokeWidth={1.9} aria-hidden="true" />
+                          {isMenuExpanded && (
+                            <>
+                              <span className="flex-1">Tools</span>
+                              <ChevronDown
+                                className={`size-3.5 shrink-0 transition-transform ${isToolsGroupOpen ? "rotate-180" : ""}`}
+                                aria-hidden="true"
+                              />
+                            </>
+                          )}
+                        </button>
+                        {isToolsGroupOpen && (
+                          <div
+                            className={`flex flex-col gap-1 ${isMenuExpanded ? "border-l border-line/60 pl-4" : ""}`}
+                          >
+                            {toolsItems.map((toolItem) => {
+                              const ToolIcon = toolItem.icon;
+                              return (
+                                <Link
+                                  key={toolItem.to}
+                                  to={toolItem.to}
+                                  className={`flex min-w-0 flex-none flex-row items-center justify-center rounded-xl border border-transparent py-2 text-sm font-medium text-muted-fg transition hover:border-glass-border hover:bg-panel/70 hover:text-ink ${isMenuExpanded ? "justify-start gap-3 px-3 text-left" : "px-2"}`}
+                                  activeProps={{
+                                    className:
+                                      "brand-gradient border-glass-border text-accent-brand-ink font-semibold shadow-lg shadow-accent-brand/30",
+                                  }}
+                                  title={!isMenuExpanded ? toolItem.long : undefined}
+                                >
+                                  <ToolIcon className="size-4 shrink-0" strokeWidth={1.9} aria-hidden="true" />
+                                  <span className={isMenuExpanded ? "inline" : "hidden"}>{toolItem.long}</span>
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      activeOptions={{ exact: item.to === "/" }}
+                      className={`flex min-w-0 flex-none flex-row items-center justify-center rounded-xl border border-transparent py-2.5 text-sm font-medium text-muted-fg transition hover:border-glass-border hover:bg-panel/70 hover:text-ink ${isMenuExpanded ? "justify-start gap-3 px-3 text-left" : "px-2"}`}
+                      activeProps={{
+                        className:
+                          "brand-gradient border-glass-border text-accent-brand-ink font-semibold shadow-lg shadow-accent-brand/30",
+                      }}
+                      title={!isMenuExpanded ? item.long : undefined}
+                    >
+                      <Icon className="size-4 shrink-0" strokeWidth={1.9} aria-hidden="true" />
+                      <span className={isMenuExpanded ? "inline" : "hidden"}>{item.long}</span>
+                    </Link>
+                  );
+                });
+              })()}
             </nav>
 
             <div

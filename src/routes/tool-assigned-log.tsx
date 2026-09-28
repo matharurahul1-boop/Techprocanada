@@ -88,7 +88,13 @@ export const Route = createFileRoute("/tool-assigned-log")({
   component: ToolAssignedLogPage,
 });
 
-function ToolAssignedLogPage() {
+export function ToolAssignedLogPage({
+  eyebrow = "Assignment history",
+  title = "Tool Assigned Log",
+}: {
+  eyebrow?: string;
+  title?: string;
+} = {}) {
   const { assignments, items, toolTypes, users, machines } = useStore();
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -163,7 +169,7 @@ function ToolAssignedLogPage() {
   };
 
   return (
-    <Shell eyebrow="Assignment history" title="Tool Assigned Log">
+    <Shell eyebrow={eyebrow} title={title}>
       <div className="animate-rise px-5 py-6 lg:px-8 lg:py-8">
         <section className="min-w-0">
           <div className="mb-3 flex items-center justify-between px-1">

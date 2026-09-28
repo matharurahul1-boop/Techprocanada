@@ -21,6 +21,7 @@ import { Route as MachinesRouteImport } from './routes/machines'
 import { Route as MonthlyExpenseRouteImport } from './routes/monthly-expense'
 import { Route as TimelinessConfigurationRouteImport } from './routes/timeliness-configuration'
 import { Route as ToolAssignedLogRouteImport } from './routes/tool-assigned-log'
+import { Route as ToolStockWithdrawalLogRouteImport } from './routes/tool-stock-withdrawal-log'
 import { Route as ToolTypesRouteImport } from './routes/tool-types'
 import { Route as ToolsOrderLogRouteImport } from './routes/tools-order-log'
 import { Route as UsersRouteImport } from './routes/users'
@@ -85,6 +86,11 @@ const ToolAssignedLogRoute = ToolAssignedLogRouteImport.update({
   path: '/tool-assigned-log',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ToolStockWithdrawalLogRoute = ToolStockWithdrawalLogRouteImport.update({
+  id: '/tool-stock-withdrawal-log',
+  path: '/tool-stock-withdrawal-log',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ToolTypesRoute = ToolTypesRouteImport.update({
   id: '/tool-types',
   path: '/tool-types',
@@ -114,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/monthly-expense': typeof MonthlyExpenseRoute
   '/timeliness-configuration': typeof TimelinessConfigurationRoute
   '/tool-assigned-log': typeof ToolAssignedLogRoute
+  '/tool-stock-withdrawal-log': typeof ToolStockWithdrawalLogRoute
   '/tool-types': typeof ToolTypesRoute
   '/tools-order-log': typeof ToolsOrderLogRoute
   '/users': typeof UsersRoute
@@ -131,6 +138,7 @@ export interface FileRoutesByTo {
   '/monthly-expense': typeof MonthlyExpenseRoute
   '/timeliness-configuration': typeof TimelinessConfigurationRoute
   '/tool-assigned-log': typeof ToolAssignedLogRoute
+  '/tool-stock-withdrawal-log': typeof ToolStockWithdrawalLogRoute
   '/tool-types': typeof ToolTypesRoute
   '/tools-order-log': typeof ToolsOrderLogRoute
   '/users': typeof UsersRoute
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/monthly-expense': typeof MonthlyExpenseRoute
   '/timeliness-configuration': typeof TimelinessConfigurationRoute
   '/tool-assigned-log': typeof ToolAssignedLogRoute
+  '/tool-stock-withdrawal-log': typeof ToolStockWithdrawalLogRoute
   '/tool-types': typeof ToolTypesRoute
   '/tools-order-log': typeof ToolsOrderLogRoute
   '/users': typeof UsersRoute
@@ -168,6 +177,7 @@ export interface FileRouteTypes {
     | '/monthly-expense'
     | '/timeliness-configuration'
     | '/tool-assigned-log'
+    | '/tool-stock-withdrawal-log'
     | '/tool-types'
     | '/tools-order-log'
     | '/users'
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
     | '/monthly-expense'
     | '/timeliness-configuration'
     | '/tool-assigned-log'
+    | '/tool-stock-withdrawal-log'
     | '/tool-types'
     | '/tools-order-log'
     | '/users'
@@ -202,6 +213,7 @@ export interface FileRouteTypes {
     | '/monthly-expense'
     | '/timeliness-configuration'
     | '/tool-assigned-log'
+    | '/tool-stock-withdrawal-log'
     | '/tool-types'
     | '/tools-order-log'
     | '/users'
@@ -220,6 +232,7 @@ export interface RootRouteChildren {
   MonthlyExpenseRoute: typeof MonthlyExpenseRoute
   TimelinessConfigurationRoute: typeof TimelinessConfigurationRoute
   ToolAssignedLogRoute: typeof ToolAssignedLogRoute
+  ToolStockWithdrawalLogRoute: typeof ToolStockWithdrawalLogRoute
   ToolTypesRoute: typeof ToolTypesRoute
   ToolsOrderLogRoute: typeof ToolsOrderLogRoute
   UsersRoute: typeof UsersRoute
@@ -311,6 +324,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ToolAssignedLogRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tool-stock-withdrawal-log': {
+      id: '/tool-stock-withdrawal-log'
+      path: '/tool-stock-withdrawal-log'
+      fullPath: '/tool-stock-withdrawal-log'
+      preLoaderRoute: typeof ToolStockWithdrawalLogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tool-types': {
       id: '/tool-types'
       path: '/tool-types'
@@ -348,6 +368,7 @@ const rootRouteChildren: RootRouteChildren = {
   MonthlyExpenseRoute: MonthlyExpenseRoute,
   TimelinessConfigurationRoute: TimelinessConfigurationRoute,
   ToolAssignedLogRoute: ToolAssignedLogRoute,
+  ToolStockWithdrawalLogRoute: ToolStockWithdrawalLogRoute,
   ToolTypesRoute: ToolTypesRoute,
   ToolsOrderLogRoute: ToolsOrderLogRoute,
   UsersRoute: UsersRoute,
