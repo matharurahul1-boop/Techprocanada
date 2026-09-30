@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Shell, fieldClass, labelClass } from "@/components/Shell";
 import { AddButton, Sheet, SideSheet } from "@/components/Sheet";
 import { Pagination } from "@/components/Pagination";
+import { EditAssignmentSheet, EditOrderSheet } from "@/components/edit-sheets";
 
 import {
   addAssignment,
@@ -52,6 +53,8 @@ function InventoryItemsPage() {
   const routeSearch = Route.useSearch();
   const [orderItemId, setOrderItemId] = useState<string | null>(null);
   const [assignItemId, setAssignItemId] = useState<string | null>(null);
+  const [editOrderId, setEditOrderId] = useState<string | null>(null);
+  const [editAssignId, setEditAssignId] = useState<string | null>(null);
   const [issuedTo, setIssuedTo] = useState("");
   const [issuedFrom, setIssuedFrom] = useState<"Admin" | "HR">("Admin");
   const [issuedDate, setIssuedDate] = useState("");
@@ -676,12 +679,24 @@ function InventoryItemsPage() {
                       {o.documentName ? ` · ${o.documentName}` : ""}
                     </p>
                   </div>
-                  <button
-                    onClick={() => removeOrder(o.id)}
-                    className="shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold text-muted-fg transition hover:bg-warn-soft hover:text-warn"
-                  >
-                    Remove
-                  </button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      onClick={() => setEditOrderId(o.id)}
+                      aria-label="Edit order"
+                      title="Edit"
+                      className="grid size-8 place-items-center rounded-full bg-chip text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                    <button
+                      onClick={() => removeOrder(o.id)}
+                      aria-label="Remove order"
+                      title="Remove"
+                      className="grid size-8 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -899,18 +914,33 @@ function InventoryItemsPage() {
                       <p className="text-[11px] text-muted-fg">{a.remarks}</p>
                     )}
                   </div>
-                  <button
-                    onClick={() => removeAssignment(a.id)}
-                    className="shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold text-muted-fg transition hover:bg-warn-soft hover:text-warn"
-                  >
-                    Remove
-                  </button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      onClick={() => setEditAssignId(a.id)}
+                      aria-label="Edit assignment"
+                      title="Edit"
+                      className="grid size-8 place-items-center rounded-full bg-chip text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                    <button
+                      onClick={() => removeAssignment(a.id)}
+                      aria-label="Remove assignment"
+                      title="Remove"
+                      className="grid size-8 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         )}
       </SideSheet>
+
+      <EditOrderSheet order={orders.find((o) => o.id === editOrderId) ?? null} onClose={() => setEditOrderId(null)} />
+      <EditAssignmentSheet assignment={assignments.find((a) => a.id === editAssignId) ?? null} onClose={() => setEditAssignId(null)} />
     </Shell>
   );
 }

@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Search, X } from "lucide-react";
+import { Pencil, Search, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Shell, fieldClass } from "@/components/Shell";
 import { Pagination } from "@/components/Pagination";
-import { balanceOf, useStore } from "@/lib/store";
+import { DetailSheet, EditAssignmentSheet, formatDate } from "@/components/edit-sheets";
+import { balanceOf, removeAssignment, useStore, type ToolAssignment } from "@/lib/store";
 
 const PAGE_SIZE = 15;
 
@@ -95,7 +96,7 @@ export function ToolAssignedLogPage({
   eyebrow?: string;
   title?: string;
 } = {}) {
-  const { assignments, items, toolTypes, users, machines } = useStore();
+  const { assignments, items, toolTypes, users, machines, brands } = useStore();
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [activePreset, setActivePreset] = useState<PresetKey>("all");
@@ -104,6 +105,8 @@ export function ToolAssignedLogPage({
   const [type, setType] = useState("");
   const [recipient, setRecipient] = useState("");
   const [page, setPage] = useState(1);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
 
   const applyPreset = (key: PresetKey) => {
     setActivePreset(key);
@@ -162,10 +165,15 @@ export function ToolAssignedLogPage({
     setRecipient("");
   };
 
-  const formatDate = (value: string) => {
-    if (!value) return "—";
-    const [year, month, day] = value.split("-");
-    return year && month && day ? `${day}/${month}/${year}` : value;
+  const detailRow = rows.find((row) => row.id === detailId) ?? null;
+  const editAssignment: ToolAssignment | null = assignments.find((a) => a.id === editId) ?? null;
+  const brandName = (id: string) => brands.find((b) => b.id === id)?.name ?? "";
+
+  const askDelete = (row: { id: string; toolName: string; recipientName: string }) => {
+    if (window.confirm(`Delete this record (${row.toolName} -> ${row.recipientName})? The item's issued count will be restored.`)) {
+      removeAssignment(row.id);
+      setDetailId((current) => (current === row.id ? null : current));
+    }
   };
 
   return (
@@ -232,8 +240,8 @@ export function ToolAssignedLogPage({
             ))}
           </div>
 
-          <div className="glass-surface overflow-hidden rounded-2xl border shadow-xl shadow-accent-brand/5">
-            <div className="hidden grid-cols-[minmax(12rem,1.3fr)_minmax(8rem,0.7fr)_7rem_6rem_6rem_minmax(9rem,0.8fr)_minmax(9rem,0.8fr)] items-center gap-4 border-b border-line px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-fg lg:grid">
+          <div className="glass-surface overflow-x-auto rounded-2xl border shadow-xl shadow-accent-brand/5">
+            <div className="hidden min-w-[78rem] items-center gap-3 border-b border-line px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-fg xl:grid xl:grid-cols-[minmax(11rem,1.3fr)_minmax(7rem,0.7fr)_6.5rem_4.5rem_4.5rem_minmax(8rem,0.8fr)_minmax(8rem,0.8fr)_minmax(6rem,0.6fr)_minmax(6rem,0.6fr)_5.5rem]">
               <span>Item</span>
               <span>Tool type</span>
               <span>Issued date</span>
@@ -241,6 +249,9 @@ export function ToolAssignedLogPage({
               <span className="text-right">Balance</span>
               <span>Issued to</span>
               <span>Location / Machine</span>
+              <span>Job no.</span>
+              <span>Drawing no.</span>
+              <span className="text-center">Actions</span>
             </div>
 
             {visibleRows.length === 0 ? (
@@ -250,36 +261,91 @@ export function ToolAssignedLogPage({
               </div>
             ) : (
               <div className="divide-y divide-line">
-                {visibleRows.map((row, index) => (
-                  <article key={row.id} className="px-4 py-3.5 lg:grid lg:grid-cols-[minmax(12rem,1.3fr)_minmax(8rem,0.7fr)_7rem_6rem_6rem_minmax(9rem,0.8fr)_minmax(9rem,0.8fr)] lg:items-center lg:gap-4">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold">{row.toolName}</p>
-                      <p className="truncate text-[12px] text-muted-fg lg:hidden">{row.toolType}</p>
+                {visibleRows.map((row) => {
+                  const actions = (
+                    <div className="flex items-center justify-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setEditId(row.id);
+                        }}
+                        aria-label={`Edit assignment of ${row.toolName}`}
+                        title="Edit"
+                        className="grid size-8 shrink-0 place-items-center rounded-full bg-chip text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          askDelete(row);
+                        }}
+                        aria-label={`Delete assignment of ${row.toolName}`}
+                        title="Delete"
+                        className="grid size-8 shrink-0 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
-                    <span className="hidden truncate text-[12px] text-muted-fg lg:block">{row.toolType}</span>
-                    <span className="hidden font-mono text-[12px] lg:block">{formatDate(row.issuedDate)}</span>
-                    <span className="hidden text-right font-mono text-[13px] text-muted-fg lg:block">{row.qtyIssued}</span>
-                    <span className="hidden text-right font-mono text-[13px] font-semibold lg:block">{row.balance}</span>
-                    <div className="hidden min-w-0 items-center gap-2 lg:flex">
-                      <span className="grid size-7 shrink-0 place-items-center rounded-full bg-chip text-[10px] font-bold text-accent-brand">{row.recipientName.charAt(0).toUpperCase()}</span>
-                      <span className="truncate text-[13px]">{row.recipientName}</span>
-                    </div>
-                    <span className="hidden truncate text-[12px] text-muted-fg lg:block">
-                      {[row.location, row.machineName].filter(Boolean).join(" · ") || "—"}
-                    </span>
-                    <div className="mt-2 flex items-center gap-4 lg:hidden">
-                      <div><p className="text-[10px] uppercase text-muted-fg">Date</p><p className="font-mono text-[11px]">{formatDate(row.issuedDate)}</p></div>
-                      <div><p className="text-[10px] uppercase text-muted-fg">Issued</p><p className="font-mono text-[11px] font-semibold">{row.qtyIssued}</p></div>
-                      <div><p className="text-[10px] uppercase text-muted-fg">Balance</p><p className="font-mono text-[11px] font-semibold">{row.balance}</p></div>
-                    </div>
-                    <p className="mt-2 text-[12px] lg:hidden">Issued to <span className="font-semibold">{row.recipientName}</span> from {row.issuedFrom}</p>
-                    {(row.location || row.machineName) && (
-                      <p className="mt-1 text-[12px] text-muted-fg lg:hidden">
-                        {[row.location, row.machineName].filter(Boolean).join(" · ")}
-                      </p>
-                    )}
-                  </article>
-                ))}
+                  );
+                  return (
+                    <article
+                      key={row.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setDetailId(row.id)}
+                      onKeyDown={(event) => {
+                        if (event.target !== event.currentTarget) return;
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setDetailId(row.id);
+                        }
+                      }}
+                      className="cursor-pointer px-4 py-3.5 transition-colors hover:bg-panel/40 xl:grid xl:min-w-[78rem] xl:grid-cols-[minmax(11rem,1.3fr)_minmax(7rem,0.7fr)_6.5rem_4.5rem_4.5rem_minmax(8rem,0.8fr)_minmax(8rem,0.8fr)_minmax(6rem,0.6fr)_minmax(6rem,0.6fr)_5.5rem] xl:items-center xl:gap-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold">{row.toolName}</p>
+                        <p className="truncate text-[12px] text-muted-fg xl:hidden">{row.toolType}</p>
+                      </div>
+                      <span className="hidden truncate text-[12px] text-muted-fg xl:block">{row.toolType}</span>
+                      <span className="hidden font-mono text-[12px] xl:block">{formatDate(row.issuedDate)}</span>
+                      <span className="hidden text-right font-mono text-[13px] text-muted-fg xl:block">{row.qtyIssued}</span>
+                      <span className="hidden text-right font-mono text-[13px] font-semibold xl:block">{row.balance}</span>
+                      <div className="hidden min-w-0 items-center gap-2 xl:flex">
+                        <span className="grid size-7 shrink-0 place-items-center rounded-full bg-chip text-[10px] font-bold text-accent-brand">{row.recipientName.charAt(0).toUpperCase()}</span>
+                        <span className="truncate text-[13px]">{row.recipientName}</span>
+                      </div>
+                      <span className="hidden truncate text-[12px] text-muted-fg xl:block">
+                        {[row.location, row.machineName].filter(Boolean).join(" · ") || "—"}
+                      </span>
+                      <span className="hidden truncate font-mono text-[12px] xl:block">{row.jobNumber || "—"}</span>
+                      <span className="hidden truncate font-mono text-[12px] xl:block">{row.drawingNumber || "—"}</span>
+                      <div className="hidden xl:block">{actions}</div>
+
+                      <div className="mt-2 flex items-center gap-4 xl:hidden">
+                        <div><p className="text-[10px] uppercase text-muted-fg">Date</p><p className="font-mono text-[11px]">{formatDate(row.issuedDate)}</p></div>
+                        <div><p className="text-[10px] uppercase text-muted-fg">Issued</p><p className="font-mono text-[11px] font-semibold">{row.qtyIssued}</p></div>
+                        <div><p className="text-[10px] uppercase text-muted-fg">Balance</p><p className="font-mono text-[11px] font-semibold">{row.balance}</p></div>
+                      </div>
+                      <p className="mt-2 text-[12px] xl:hidden">Issued to <span className="font-semibold">{row.recipientName}</span></p>
+                      {(row.location || row.machineName) && (
+                        <p className="mt-1 text-[12px] text-muted-fg xl:hidden">
+                          {[row.location, row.machineName].filter(Boolean).join(" · ")}
+                        </p>
+                      )}
+                      {(row.jobNumber || row.drawingNumber) && (
+                        <p className="mt-1 font-mono text-[11px] text-muted-fg xl:hidden">
+                          {row.jobNumber && <>Job {row.jobNumber}</>}
+                          {row.jobNumber && row.drawingNumber ? " · " : ""}
+                          {row.drawingNumber && <>Dwg {row.drawingNumber}</>}
+                        </p>
+                      )}
+                      <div className="mt-2 flex justify-end xl:hidden">{actions}</div>
+                    </article>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -294,6 +360,55 @@ export function ToolAssignedLogPage({
           />
         </section>
       </div>
+
+      <DetailSheet
+        open={!!detailRow}
+        title="Assignment details"
+        subtitle={detailRow?.toolName}
+        onClose={() => setDetailId(null)}
+        rows={
+          detailRow
+            ? [
+                ["Item taken", detailRow.toolName],
+                ["Tool type", detailRow.toolType],
+                ["Issued to", detailRow.recipientName],
+                ["Issued date", formatDate(detailRow.issuedDate)],
+                ["Qty issued", String(detailRow.qtyIssued)],
+                ["Balance now", String(detailRow.balance)],
+                ["Brand", brandName(detailRow.brandId)],
+                ["Location", detailRow.location],
+                ["Machine", detailRow.machineName],
+                ["Job no.", detailRow.jobNumber],
+                ["Drawing no.", detailRow.drawingNumber],
+                ["Remarks", detailRow.remarks],
+              ]
+            : []
+        }
+        actions={
+          detailRow && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditId(detailRow.id);
+                  setDetailId(null);
+                }}
+                className="brand-gradient inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-semibold text-accent-brand-ink"
+              >
+                <Pencil size={14} /> Edit
+              </button>
+              <button
+                type="button"
+                onClick={() => askDelete(detailRow)}
+                className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-warn-soft text-sm font-semibold text-warn"
+              >
+                <Trash2 size={14} /> Delete
+              </button>
+            </>
+          )
+        }
+      />
+      <EditAssignmentSheet assignment={editAssignment} onClose={() => setEditId(null)} />
     </Shell>
   );
 }

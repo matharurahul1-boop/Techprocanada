@@ -243,7 +243,7 @@ async function loadAll() {
   ] = await Promise.all([
     supabase.from("tool_types").select("*").order("name"),
     supabase.from("brands").select("*").order("name"),
-    supabase.from("companies").select("*").order("name"),
+    supabase.from("companies").select("*").order("id", { ascending: false }),
     supabase.from("machines").select("*").order("name"),
     supabase.from("app_users").select("*").order("name"),
     supabase.from("inventory_items").select("*").order("name"),
@@ -530,7 +530,7 @@ export function removeMachine(id: string) {
 
 export function addCompany(name: string) {
   const tempId = uid();
-  state = { ...state, companies: [...state.companies, { id: tempId, name }] };
+  state = { ...state, companies: [{ id: tempId, name }, ...state.companies] };
   persist();
   emit();
   void (async () => {
@@ -602,6 +602,29 @@ export function addMachineHour(entry: Omit<MachineHour, "id">) {
     persist();
     emit();
   })();
+}
+
+export function updateMachineHour(id: string, patch: Partial<Omit<MachineHour, "id">>) {
+  state = {
+    ...state,
+    machineHours: state.machineHours.map((m) => (m.id === id ? { ...m, ...patch } : m)),
+  };
+  persist();
+  emit();
+  if (!isSavedId(id)) return;
+  const dbPatch: TablesUpdate<"machine_hours"> = {};
+  if (patch.machineId !== undefined) dbPatch["machine_id"] = patch.machineId ? toDbId(patch.machineId) : null;
+  if (patch.operatorId !== undefined) dbPatch["operator_id"] = patch.operatorId ? toDbId(patch.operatorId) : null;
+  if (patch.workDate !== undefined) dbPatch["work_date"] = patch.workDate;
+  if (patch.hours !== undefined) dbPatch["hours"] = patch.hours;
+  if (patch.jobNumber !== undefined) dbPatch["job_number"] = patch.jobNumber || null;
+  if (patch.notes !== undefined) dbPatch["notes"] = patch.notes || null;
+  if (Object.keys(dbPatch).length === 0) return;
+  void supabase
+    .from("machine_hours")
+    .update(dbPatch)
+    .eq("id", toDbId(id))
+    .then(({ error }) => error && reportError("Update machine hours", error));
 }
 
 export function removeMachineHour(id: string) {
@@ -756,19 +779,64 @@ export function removeOrder(id: string) {
     .then(({ error }) => error && reportError("Remove order", error));
 }
 
-export function updateOrder(id: string, patch: Partial<Pick<ToolOrder, "confirmed">>) {
+export function updateOrder(id: string, patch: Partial<Omit<ToolOrder, "id" | "itemId">>) {
+  const existing = state.orders.find((o) => o.id === id);
   state = {
     ...state,
     orders: state.orders.map((order) => (order.id === id ? { ...order, ...patch } : order)),
   };
+  if (existing && patch.qtyOrdered !== undefined) {
+    bumpItem(existing.itemId, { ordered: patch.qtyOrdered - existing.qtyOrdered });
+  }
   persist();
   emit();
-  if (!isSavedId(id) || patch.confirmed === undefined) return;
+  if (!isSavedId(id)) return;
+  const dbPatch: TablesUpdate<"inventory_orders"> = {};
+  if (patch.purchaseDate !== undefined) dbPatch["purchase_date"] = patch.purchaseDate || null;
+  if (patch.brandId !== undefined) dbPatch["brand_id"] = patch.brandId ? toDbId(patch.brandId) : null;
+  if (patch.qtyOrdered !== undefined) dbPatch["qty_ordered"] = patch.qtyOrdered;
+  if (patch.amount !== undefined) dbPatch["amount"] = patch.amount;
+  if (patch.documentName !== undefined) dbPatch["document_name"] = patch.documentName || null;
+  if (patch.confirmed !== undefined) dbPatch["confirmed"] = patch.confirmed;
+  if (Object.keys(dbPatch).length === 0) return;
   void supabase
     .from("inventory_orders")
-    .update({ confirmed: patch.confirmed })
+    .update(dbPatch)
     .eq("id", toDbId(id))
     .then(({ error }) => error && reportError("Update order", error));
+}
+
+export function updateAssignment(
+  id: string,
+  patch: Partial<Omit<ToolAssignment, "id" | "itemId">>,
+) {
+  const existing = state.assignments.find((a) => a.id === id);
+  state = {
+    ...state,
+    assignments: state.assignments.map((a) => (a.id === id ? { ...a, ...patch } : a)),
+  };
+  if (existing && patch.qtyIssued !== undefined) {
+    bumpItem(existing.itemId, { issued: patch.qtyIssued - existing.qtyIssued });
+  }
+  persist();
+  emit();
+  if (!isSavedId(id)) return;
+  const dbPatch: TablesUpdate<"inventory_assigned"> = {};
+  if (patch.userId !== undefined) dbPatch["user_id"] = patch.userId ? toDbId(patch.userId) : null;
+  if (patch.issuedDate !== undefined) dbPatch["issued_date"] = patch.issuedDate || null;
+  if (patch.qtyIssued !== undefined) dbPatch["qty_issued"] = patch.qtyIssued;
+  if (patch.brandId !== undefined) dbPatch["brand_id"] = patch.brandId ? toDbId(patch.brandId) : null;
+  if (patch.remarks !== undefined) dbPatch["remarks"] = patch.remarks || null;
+  if (patch.jobNumber !== undefined) dbPatch["job_number"] = patch.jobNumber || null;
+  if (patch.drawingNumber !== undefined) dbPatch["drawing_number"] = patch.drawingNumber || null;
+  if (patch.location !== undefined) dbPatch["source_location"] = patch.location || null;
+  if (patch.machineId !== undefined) dbPatch["machine_id"] = patch.machineId ? toDbId(patch.machineId) : null;
+  if (Object.keys(dbPatch).length === 0) return;
+  void supabase
+    .from("inventory_assigned")
+    .update(dbPatch)
+    .eq("id", toDbId(id))
+    .then(({ error }) => error && reportError("Update assignment", error));
 }
 
 export function addUser(name: string) {

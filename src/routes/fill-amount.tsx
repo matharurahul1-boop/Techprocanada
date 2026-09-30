@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CheckCircle2, CircleDollarSign, Clock } from "lucide-react";
+import { CheckCircle2, CircleDollarSign, Clock, Pencil, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Shell } from "@/components/Shell";
 import { Pagination } from "@/components/Pagination";
-import { updateOrder, useStore } from "@/lib/store";
+import { EditOrderSheet } from "@/components/edit-sheets";
+import { removeOrder, updateOrder, useStore } from "@/lib/store";
 
 const PAGE_SIZE = 20;
 const currency = new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" });
@@ -33,6 +34,7 @@ function FillAmountPage() {
   const { orders, items, brands } = useStore();
   const [filter, setFilter] = useState<"all" | "confirmed" | "unconfirmed">("unconfirmed");
   const [page, setPage] = useState(1);
+  const [editId, setEditId] = useState<string | null>(null);
 
   const itemById = new Map(items.map((item) => [item.id, item.name]));
   const brandById = new Map(brands.map((brand) => [brand.id, brand.name]));
@@ -66,6 +68,35 @@ function FillAmountPage() {
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
   const visibleRows = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  const askDelete = (id: string, name: string) => {
+    if (window.confirm(`Delete this order for ${name}? The item's ordered count will be reduced.`)) {
+      removeOrder(id);
+    }
+  };
+
+  const rowActions = (row: { id: string; itemId: string }) => (
+    <div className="flex items-center justify-center gap-1.5">
+      <button
+        type="button"
+        onClick={() => setEditId(row.id)}
+        aria-label="Edit order"
+        title="Edit"
+        className="grid size-8 place-items-center rounded-full bg-chip text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
+      >
+        <Pencil size={14} />
+      </button>
+      <button
+        type="button"
+        onClick={() => askDelete(row.id, itemById.get(row.itemId) ?? "this order")}
+        aria-label="Delete order"
+        title="Delete"
+        className="grid size-8 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn"
+      >
+        <Trash2 size={14} />
+      </button>
+    </div>
+  );
 
   const formatDate = (value: string) => {
     if (!value) return "—";
@@ -146,12 +177,13 @@ function FillAmountPage() {
           </div>
 
           <div className="glass-surface overflow-hidden rounded-2xl border shadow-xl shadow-accent-brand/5">
-            <div className="hidden grid-cols-[minmax(10rem,1.3fr)_minmax(7rem,0.8fr)_6rem_7rem_6rem] items-center gap-4 border-b border-line px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-fg lg:grid">
+            <div className="hidden grid-cols-[minmax(10rem,1.3fr)_minmax(7rem,0.8fr)_6rem_7rem_6rem_5.5rem] items-center gap-4 border-b border-line px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-fg lg:grid">
               <span>Item</span>
               <span>Brand</span>
               <span className="text-right">Amount</span>
               <span>Purchase date</span>
               <span className="text-center">Confirmed</span>
+              <span className="text-center">Actions</span>
             </div>
             {visibleRows.length === 0 ? (
               <p className="px-4 py-8 text-center text-sm text-muted-fg">No matching orders.</p>
@@ -160,7 +192,7 @@ function FillAmountPage() {
                 {visibleRows.map((row) => (
                   <div
                     key={row.id}
-                    className="px-4 py-3.5 lg:grid lg:grid-cols-[minmax(10rem,1.3fr)_minmax(7rem,0.8fr)_6rem_7rem_6rem] lg:items-center lg:gap-4"
+                    className="px-4 py-3.5 lg:grid lg:grid-cols-[minmax(10rem,1.3fr)_minmax(7rem,0.8fr)_6rem_7rem_6rem_5.5rem] lg:items-center lg:gap-4"
                   >
                     <p className="truncate text-sm font-semibold">
                       {itemById.get(row.itemId) ?? "Removed item"}
@@ -188,11 +220,14 @@ function FillAmountPage() {
                         />
                       </button>
                     </div>
+                    <div className="hidden lg:block">{rowActions(row)}</div>
                     <div className="mt-2 flex items-center justify-between gap-3 lg:hidden">
                       <p className="font-mono text-[11px] text-muted-fg">
                         {brandById.get(row.brandId) ?? "Removed brand"} · {currency.format(row.amount)} ·{" "}
                         {formatDate(row.purchaseDate)}
                       </p>
+                      <div className="flex shrink-0 items-center gap-2">
+                      {rowActions(row)}
                       <button
                         type="button"
                         role="switch"
@@ -205,6 +240,7 @@ function FillAmountPage() {
                           className={`absolute top-0.5 size-4 rounded-full bg-panel shadow transition-all ${row.confirmed ? "left-[18px]" : "left-0.5"}`}
                         />
                       </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -222,6 +258,7 @@ function FillAmountPage() {
           />
         </section>
       </div>
+      <EditOrderSheet order={orders.find((o) => o.id === editId) ?? null} onClose={() => setEditId(null)} />
     </Shell>
   );
 }

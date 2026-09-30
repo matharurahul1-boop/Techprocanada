@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Search, Trash2, X } from "lucide-react";
+import { Pencil, Search, Trash2, X } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 
 import { Shell, fieldClass, labelClass } from "@/components/Shell";
 import { AddButton, Sheet } from "@/components/Sheet";
 import { Pagination } from "@/components/Pagination";
+import { DetailSheet, EditMachineHourSheet, formatDate } from "@/components/edit-sheets";
 import { addMachineHour, removeMachineHour, useStore } from "@/lib/store";
 
 const PAGE_SIZE = 20;
@@ -44,6 +45,8 @@ function MachineHoursPage() {
   const [form, setForm] = useState(emptyForm);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
 
   const machineName = (id: string) => machines.find((m) => m.id === id)?.name ?? "Unassigned";
   const operatorName = (id: string) => users.find((u) => u.id === id)?.name ?? "Unassigned";
@@ -65,6 +68,16 @@ function MachineHoursPage() {
   const visibleEntries = filteredEntries.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   useEffect(() => setPage(1), [search]);
+
+  const detailEntry = machineHours.find((entry) => entry.id === detailId) ?? null;
+  const editEntry = machineHours.find((entry) => entry.id === editId) ?? null;
+
+  const askDelete = (id: string, machine: string) => {
+    if (window.confirm(`Delete this machine hours entry for ${machine}?`)) {
+      removeMachineHour(id);
+      setDetailId((current) => (current === id ? null : current));
+    }
+  };
 
   const openNew = () => {
     setForm({ ...emptyForm, machineId: machines[0]?.id ?? "", operatorId: users[0]?.id ?? "" });
@@ -241,13 +254,13 @@ function MachineHoursPage() {
           </div>
 
           <div className="glass-surface overflow-hidden rounded-2xl border shadow-xl shadow-accent-brand/5">
-            <div className="hidden items-center gap-4 border-b border-line px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-fg lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem_6rem_8rem_3rem]">
+            <div className="hidden items-center gap-4 border-b border-line px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-fg lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem_6rem_8rem_5.5rem]">
               <span>Machine</span>
               <span>Operator</span>
               <span className="text-right">Date</span>
               <span className="text-right">Hours</span>
               <span>Job #</span>
-              <span className="text-center">Delete</span>
+              <span className="text-center">Actions</span>
             </div>
 
             <div className="divide-y divide-line">
@@ -261,7 +274,17 @@ function MachineHoursPage() {
               {visibleEntries.map((entry) => (
                 <div
                   key={entry.id}
-                  className="px-4 py-3.5 transition-colors hover:bg-panel/40 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem_6rem_8rem_3rem] lg:items-center lg:gap-4"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setDetailId(entry.id)}
+                  onKeyDown={(event) => {
+                    if (event.target !== event.currentTarget) return;
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setDetailId(entry.id);
+                    }
+                  }}
+                  className="cursor-pointer px-4 py-3.5 transition-colors hover:bg-panel/40 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem_6rem_8rem_5.5rem] lg:items-center lg:gap-4"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{machineName(entry.machineId)}</p>
@@ -287,24 +310,56 @@ function MachineHoursPage() {
                       {entry.workDate} · <span className="text-ink">{entry.hours} hrs</span>
                       {entry.jobNumber ? ` · ${entry.jobNumber}` : ""}
                     </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setEditId(entry.id);
+                        }}
+                        aria-label={`Edit entry for ${machineName(entry.machineId)}`}
+                        title="Edit"
+                        className="grid size-8 shrink-0 place-items-center rounded-full bg-chip text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          askDelete(entry.id, machineName(entry.machineId));
+                        }}
+                        aria-label={`Delete entry for ${machineName(entry.machineId)}`}
+                        title="Delete"
+                        className="grid size-8 shrink-0 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="hidden items-center justify-center gap-1.5 lg:flex">
                     <button
-                      onClick={() => removeMachineHour(entry.id)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setEditId(entry.id);
+                      }}
+                      aria-label={`Edit entry for ${machineName(entry.machineId)}`}
+                      title="Edit"
+                      className="grid size-8 place-items-center rounded-full bg-chip text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        askDelete(entry.id, machineName(entry.machineId));
+                      }}
                       aria-label={`Delete entry for ${machineName(entry.machineId)}`}
                       title="Delete"
-                      className="grid size-8 shrink-0 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn"
+                      className="grid size-8 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn"
                     >
                       <Trash2 size={14} />
                     </button>
                   </div>
-
-                  <button
-                    onClick={() => removeMachineHour(entry.id)}
-                    aria-label={`Delete entry for ${machineName(entry.machineId)}`}
-                    title="Delete"
-                    className="hidden size-8 place-items-center justify-self-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn lg:grid"
-                  >
-                    <Trash2 size={14} />
-                  </button>
                 </div>
               ))}
             </div>
@@ -320,6 +375,49 @@ function MachineHoursPage() {
           />
         </section>
       </div>
+
+      <DetailSheet
+        open={!!detailEntry}
+        title="Machine hours details"
+        subtitle={detailEntry ? machineName(detailEntry.machineId) : undefined}
+        onClose={() => setDetailId(null)}
+        rows={
+          detailEntry
+            ? [
+                ["Machine", machineName(detailEntry.machineId)],
+                ["Operator", operatorName(detailEntry.operatorId)],
+                ["Date", formatDate(detailEntry.workDate)],
+                ["Hours", String(detailEntry.hours)],
+                ["Job no.", detailEntry.jobNumber],
+                ["Notes", detailEntry.notes],
+              ]
+            : []
+        }
+        actions={
+          detailEntry && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditId(detailEntry.id);
+                  setDetailId(null);
+                }}
+                className="brand-gradient inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-semibold text-accent-brand-ink"
+              >
+                <Pencil size={14} /> Edit
+              </button>
+              <button
+                type="button"
+                onClick={() => askDelete(detailEntry.id, machineName(detailEntry.machineId))}
+                className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-warn-soft text-sm font-semibold text-warn"
+              >
+                <Trash2 size={14} /> Delete
+              </button>
+            </>
+          )
+        }
+      />
+      <EditMachineHourSheet entry={editEntry} onClose={() => setEditId(null)} />
     </Shell>
   );
 }
