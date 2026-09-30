@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Shell, fieldClass, labelClass } from "@/components/Shell";
 import { AddButton, Sheet, SideSheet } from "@/components/Sheet";
 import { Pagination } from "@/components/Pagination";
-import { EditAssignmentSheet, EditOrderSheet } from "@/components/edit-sheets";
+import { EditAssignmentSheet, EditOrderSheet, LocationSelect } from "@/components/edit-sheets";
 
 import {
   addAssignment,
@@ -754,13 +754,7 @@ function InventoryItemsPage() {
           <label className={labelClass} htmlFor="assign-location">
             Location
           </label>
-          <input
-            id="assign-location"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            placeholder="e.g. BonHill Location (Welding)"
-            className={`${fieldClass} mb-4`}
-          />
+          <LocationSelect id="assign-location" value={location} onChange={setLocation} />
 
           <label className={labelClass} htmlFor="assign-machine">
             Machine

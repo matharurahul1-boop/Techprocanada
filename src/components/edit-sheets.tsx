@@ -70,9 +70,11 @@ function SelectField({
 }) {
   return (
     <>
-      <label className={labelClass} htmlFor={id}>
-        {label}
-      </label>
+      {label && (
+        <label className={labelClass} htmlFor={id}>
+          {label}
+        </label>
+      )}
       <div className="relative mb-4">
         <select
           id={id}
@@ -87,6 +89,69 @@ function SelectField({
         </span>
       </div>
     </>
+  );
+}
+
+const NEW_LOCATION = "__new__";
+
+/** Dropdown of locations already used in assignments, with an option to type a new one. */
+export function LocationSelect({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const { assignments } = useStore();
+  const [adding, setAdding] = useState(false);
+  const known = Array.from(
+    new Set([...assignments.map((a) => a.location.trim()), value.trim()].filter(Boolean)),
+  ).sort((a, b) => a.localeCompare(b));
+
+  if (adding) {
+    return (
+      <div className="mb-4 flex items-center gap-2">
+        <input
+          id={id}
+          autoFocus
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Type new location"
+          className={fieldClass}
+        />
+        <button
+          type="button"
+          onClick={() => setAdding(false)}
+          className="shrink-0 rounded-lg bg-chip px-3 py-2.5 text-[12px] font-semibold text-muted-fg hover:text-ink"
+        >
+          List
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <SelectField
+      id={id}
+      label=""
+      value={value}
+      onChange={(next) => {
+        if (next === NEW_LOCATION) {
+          onChange("");
+          setAdding(true);
+        } else onChange(next);
+      }}
+    >
+      <option value="">No location</option>
+      {known.map((location) => (
+        <option key={location} value={location}>
+          {location}
+        </option>
+      ))}
+      <option value={NEW_LOCATION}>+ Add new location…</option>
+    </SelectField>
   );
 }
 
@@ -278,13 +343,7 @@ export function EditAssignmentSheet({
         <label className={labelClass} htmlFor="edit-assign-location">
           Location
         </label>
-        <input
-          id="edit-assign-location"
-          value={form.location}
-          onChange={(e) => set("location")(e.target.value)}
-          placeholder="e.g. BonHill Location (Welding)"
-          className={`${fieldClass} mb-4`}
-        />
+        <LocationSelect id="edit-assign-location" value={form.location} onChange={set("location")} />
 
         <SelectField id="edit-assign-machine" label="Machine" value={form.machineId} onChange={set("machineId")}>
           <option value="">No machine</option>
