@@ -48,7 +48,7 @@ function NotFoundComponent() {
 // one retry (see the loop guard below), rather than hide it.
 const AUTO_RELOAD_GUARD_KEY = "techpro-auto-reload-at";
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
