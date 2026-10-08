@@ -4,6 +4,7 @@ import {
   Bell,
   CalendarClock,
   ChevronDown,
+  ClipboardCheck,
   ClipboardList,
   CircleDollarSign,
   Cog,
@@ -46,6 +47,7 @@ const navItems = [
   { to: "/users", long: "Users", short: "Users", icon: Users },
   { to: "/inventory-items", long: "Inventory Items", short: "Items", icon: PackageSearch },
   { to: "/low-stock", long: "Low Stock", short: "Low Stock", icon: TriangleAlert },
+  { to: "/essential-report", long: "Essential Tools Report", short: "Essentials", icon: ClipboardCheck },
   { to: "/tools-order-log", long: "Tools Order Log", short: "Orders", icon: ShoppingCart },
   { to: "/monthly-expense", long: "Monthly Expense", short: "Expense", icon: DollarSign },
   { to: "/fill-amount", long: "Fill Amount", short: "Fill Amt", icon: CircleDollarSign },
@@ -70,19 +72,20 @@ const navItems = [
 // These live inside the collapsible "Tools" group in the desktop sidebar.
 const TOOLS_GROUP_PATHS = new Set<string>(["/tool-types", "/brand", "/company", "/users", "/machines"]);
 
-const mobileDockItems = [navItems[0], navItems[1], navItems[5], navItems[7]] as const;
+const mobileDockItems = [navItems[0], navItems[1], navItems[5], navItems[8]] as const;
 const mobileMoreItems = [
   navItems[2],
   navItems[3],
   navItems[4],
   navItems[6],
-  navItems[8],
+  navItems[7],
   navItems[9],
   navItems[10],
   navItems[11],
   navItems[12],
   navItems[13],
   navItems[14],
+  navItems[15],
 ] as const;
 
 export function Shell({

@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BrandRouteImport } from './routes/brand'
 import { Route as CompanyRouteImport } from './routes/company'
+import { Route as EssentialReportRouteImport } from './routes/essential-report'
 import { Route as FillAmountRouteImport } from './routes/fill-amount'
 import { Route as InstallAppRouteImport } from './routes/install-app'
 import { Route as InventoryItemsRouteImport } from './routes/inventory-items'
@@ -40,6 +41,11 @@ const BrandRoute = BrandRouteImport.update({
 const CompanyRoute = CompanyRouteImport.update({
   id: '/company',
   path: '/company',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EssentialReportRoute = EssentialReportRouteImport.update({
+  id: '/essential-report',
+  path: '/essential-report',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FillAmountRoute = FillAmountRouteImport.update({
@@ -117,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/brand': typeof BrandRoute
   '/company': typeof CompanyRoute
+  '/essential-report': typeof EssentialReportRoute
   '/fill-amount': typeof FillAmountRoute
   '/install-app': typeof InstallAppRoute
   '/inventory-items': typeof InventoryItemsRoute
@@ -136,6 +143,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/brand': typeof BrandRoute
   '/company': typeof CompanyRoute
+  '/essential-report': typeof EssentialReportRoute
   '/fill-amount': typeof FillAmountRoute
   '/install-app': typeof InstallAppRoute
   '/inventory-items': typeof InventoryItemsRoute
@@ -156,6 +164,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/brand': typeof BrandRoute
   '/company': typeof CompanyRoute
+  '/essential-report': typeof EssentialReportRoute
   '/fill-amount': typeof FillAmountRoute
   '/install-app': typeof InstallAppRoute
   '/inventory-items': typeof InventoryItemsRoute
@@ -177,6 +186,7 @@ export interface FileRouteTypes {
     | '/'
     | '/brand'
     | '/company'
+    | '/essential-report'
     | '/fill-amount'
     | '/install-app'
     | '/inventory-items'
@@ -196,6 +206,7 @@ export interface FileRouteTypes {
     | '/'
     | '/brand'
     | '/company'
+    | '/essential-report'
     | '/fill-amount'
     | '/install-app'
     | '/inventory-items'
@@ -215,6 +226,7 @@ export interface FileRouteTypes {
     | '/'
     | '/brand'
     | '/company'
+    | '/essential-report'
     | '/fill-amount'
     | '/install-app'
     | '/inventory-items'
@@ -235,6 +247,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BrandRoute: typeof BrandRoute
   CompanyRoute: typeof CompanyRoute
+  EssentialReportRoute: typeof EssentialReportRoute
   FillAmountRoute: typeof FillAmountRoute
   InstallAppRoute: typeof InstallAppRoute
   InventoryItemsRoute: typeof InventoryItemsRoute
@@ -272,6 +285,13 @@ declare module '@tanstack/react-router' {
       path: '/company'
       fullPath: '/company'
       preLoaderRoute: typeof CompanyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/essential-report': {
+      id: '/essential-report'
+      path: '/essential-report'
+      fullPath: '/essential-report'
+      preLoaderRoute: typeof EssentialReportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/fill-amount': {
@@ -379,6 +399,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BrandRoute: BrandRoute,
   CompanyRoute: CompanyRoute,
+  EssentialReportRoute: EssentialReportRoute,
   FillAmountRoute: FillAmountRoute,
   InstallAppRoute: InstallAppRoute,
   InventoryItemsRoute: InventoryItemsRoute,
