@@ -3,6 +3,7 @@ import { ClipboardCheck, Printer } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Shell } from "@/components/Shell";
+import techProLogo from "@/assets/techpro-logo.png";
 import { balanceOf, useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/essential-report")({
@@ -29,25 +30,55 @@ const escapeHtml = (value: string) =>
 type PrintRow = {
   name: string;
   type: string;
+  brand: string;
   threshold: number;
   balance: number;
   status: Status;
   toOrder: number;
 };
 
-function printSheet(title: string, rows: PrintRow[]) {
+const SHEET_CSS = `
+  *{box-sizing:border-box}
+  body{font-family:Arial,sans-serif;font-size:11pt;margin:28px;color:#111}
+  .head{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #c81717;padding-bottom:10px;margin-bottom:14px}
+  .head img{height:56px} .head .t{text-align:right}
+  h1{margin:0;font-size:20pt;letter-spacing:.5px} .sub{color:#555;font-size:10pt;margin-top:2px}
+  .meta{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;margin-bottom:14px}
+  .meta div{border-bottom:1px solid #000;padding:4px 0;font-size:10pt;min-height:24px}
+  .meta b{display:inline-block;min-width:92px}
+  table{width:100%;border-collapse:collapse}
+  th,td{border:1px solid #000;padding:6px 7px;text-align:center;font-size:9.5pt}
+  th{background:#eee} td.l{text-align:left}
+  td.box{width:26px} td.box span{display:inline-block;width:14px;height:14px;border:1.5px solid #000}
+  td.missing{color:#b00020;font-weight:bold} td.low{color:#a15c00;font-weight:bold}
+  td.notes{width:20%} tfoot td{font-weight:bold;background:#f6f6f6}
+  .sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:28px;margin-top:46px}
+  .sign div{border-top:1px solid #000;padding-top:4px;font-size:9.5pt;text-align:center}
+  .foot{margin-top:18px;color:#777;font-size:8.5pt;text-align:center}
+  @media print{body{margin:10mm}}
+`;
+
+function printSheet(kind: "report" | "order", rows: PrintRow[], logoUrl: string) {
   const win = window.open("", "_blank");
   if (!win) {
     window.alert("Please allow pop-ups to print the report.");
     return;
   }
-  const today = new Date().toLocaleDateString("en-CA");
+  const now = new Date();
+  const today = now.toLocaleDateString("en-CA");
+  const stamp = `${today.replace(/-/g, "")}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+  const isOrder = kind === "order";
+  const title = isOrder ? "Tools Order Form" : "Essential Tools Report";
+  const totalQty = rows.reduce((sum, r) => sum + r.toOrder, 0);
+
   const body = rows
     .map(
-      (r) => `<tr>
+      (r, i) => `<tr>
+        <td>${i + 1}</td>
         <td class="box"><span></span></td>
         <td class="l">${escapeHtml(r.name)}</td>
         <td class="l">${escapeHtml(r.type)}</td>
+        <td class="l">${escapeHtml(r.brand || "-")}</td>
         <td>${r.threshold}</td>
         <td>${r.balance}</td>
         <td class="${r.status.toLowerCase()}">${r.status}</td>
@@ -56,33 +87,55 @@ function printSheet(title: string, rows: PrintRow[]) {
       </tr>`,
     )
     .join("");
-  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>
-<style>
-  body{font-family:Arial,sans-serif;font-size:11pt;margin:24px;color:#111}
-  h1{margin:0 0 4px;font-size:18pt} p{margin:0 0 14px;color:#555}
-  table{width:100%;border-collapse:collapse}
-  th,td{border:1px solid #000;padding:6px 8px;text-align:center;font-size:10pt}
-  th{background:#eee} td.l{text-align:left}
-  td.box{width:28px} td.box span{display:inline-block;width:14px;height:14px;border:1.5px solid #000}
-  td.missing{color:#b00020;font-weight:bold} td.low{color:#a15c00;font-weight:bold}
-  td.notes{width:22%}
-  @media print{body{margin:0}}
-</style></head><body>
-<h1>${escapeHtml(title)}</h1>
-<p>Generated ${today} · ${rows.length} item${rows.length === 1 ? "" : "s"}</p>
-<table><thead><tr><th></th><th>Tool</th><th>Type</th><th>Threshold</th><th>Balance</th><th>Status</th><th>Qty to order</th><th>Notes</th></tr></thead>
-<tbody>${body || `<tr><td colspan="8">Nothing to report.</td></tr>`}</tbody></table>
-<script>window.onload=function(){window.focus();window.print();}<\/script>
+
+  const meta = isOrder
+    ? `<div class="meta">
+        <div><b>Form no.:</b> PO-${stamp}</div>
+        <div><b>Date:</b> ${today}</div>
+        <div><b>Supplier:</b></div>
+        <div><b>Required by:</b></div>
+        <div><b>Prepared by:</b></div>
+        <div><b>Ref / Job no.:</b></div>
+      </div>`
+    : `<div class="meta"><div><b>Date:</b> ${today}</div><div><b>Items:</b> ${rows.length}</div></div>`;
+
+  const sign = isOrder
+    ? `<div class="sign"><div>Prepared by</div><div>Approved by</div><div>Date approved</div></div>`
+    : "";
+
+  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)} ${today}</title>
+<style>${SHEET_CSS}</style></head><body>
+<div class="head">
+  <img src="${escapeHtml(logoUrl)}" alt="TechPro">
+  <div class="t"><h1>${escapeHtml(title)}</h1><div class="sub">TechPro Inventory Console</div></div>
+</div>
+${meta}
+<table>
+  <thead><tr><th>#</th><th>${isOrder ? "Ordered" : "Check"}</th><th>Tool</th><th>Type</th><th>Brand</th><th>Threshold</th><th>Balance</th><th>Status</th><th>Qty to order</th><th>Notes</th></tr></thead>
+  <tbody>${body || `<tr><td colspan="10">Nothing to report.</td></tr>`}</tbody>
+  <tfoot><tr><td colspan="8" style="text-align:right">Total quantity to order</td><td>${totalQty}</td><td></td></tr></tfoot>
+</table>
+${sign}
+<div class="foot">Generated ${today} from TechPro Inventory Console</div>
+<script>window.onload=function(){window.focus();setTimeout(function(){window.print()},250);}<\/script>
 </body></html>`);
   win.document.close();
 }
 
 function EssentialReportPage() {
-  const { items, toolTypes } = useStore();
+  const { items, toolTypes, orders, brands } = useStore();
   const [onlyNeeded, setOnlyNeeded] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [orderQty, setOrderQty] = useState<Record<string, string>>({});
   const [initialised, setInitialised] = useState(false);
+
+  const lastBrandName = (itemId: string) => {
+    const last = orders
+      .filter((o) => o.itemId === itemId && o.brandId)
+      .sort((a, b) => b.purchaseDate.localeCompare(a.purchaseDate))[0];
+    return last ? (brands.find((b) => b.id === last.brandId)?.name ?? "") : "";
+  };
+  const logoUrl = () => new URL(techProLogo, window.location.origin).href;
 
   const typeName = (id: string) => toolTypes.find((t) => t.id === id)?.name ?? "Unassigned";
 
@@ -127,6 +180,7 @@ function EssentialReportPage() {
   const toPrintRow = (row: (typeof rows)[number]): PrintRow => ({
     name: row.name,
     type: row.type,
+    brand: lastBrandName(row.id),
     threshold: row.threshold,
     balance: row.balance,
     status: row.status,
@@ -188,7 +242,7 @@ function EssentialReportPage() {
             <div className="ml-auto flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => printSheet("Essential Tools Report", rows.map(toPrintRow))}
+                onClick={() => printSheet("report", rows.map(toPrintRow), logoUrl())}
                 disabled={rows.length === 0}
                 className="inline-flex h-10 items-center gap-2 rounded-xl bg-chip px-4 text-sm font-semibold text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink disabled:opacity-50"
               >
@@ -196,7 +250,7 @@ function EssentialReportPage() {
               </button>
               <button
                 type="button"
-                onClick={() => printSheet("Essential Tools Order Form", selectedRows.map(toPrintRow))}
+                onClick={() => printSheet("order", selectedRows.map(toPrintRow), logoUrl())}
                 disabled={selectedRows.length === 0}
                 className="brand-gradient inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-semibold text-accent-brand-ink shadow-lg shadow-accent-brand/20 transition hover:brightness-110 disabled:opacity-50"
               >
