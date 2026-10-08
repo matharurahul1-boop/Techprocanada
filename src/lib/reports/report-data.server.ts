@@ -10,7 +10,7 @@ type Period = { start: string; end: string };
 
 async function loadLookups(db: Db) {
   const [items, types, brands, users, machines] = await Promise.all([
-    db.from("inventory_items").select("id,name,type_id"),
+    db.from("inventory_items").select("id,name,type_id,ordered,issued"),
     db.from("tool_types").select("id,name"),
     db.from("brands").select("id,name"),
     db.from("app_users").select("id,name"),
@@ -24,9 +24,11 @@ async function loadLookups(db: Db) {
       i.type_id != null ? (typeName.get(i.type_id) ?? "-") : "-",
     ]),
   );
+  const itemBalance = new Map((items.data ?? []).map((i) => [i.id, i.ordered - i.issued]));
   return {
     itemName,
     itemType,
+    itemBalance,
     brandName: new Map((brands.data ?? []).map((b) => [b.id, b.name])),
     userName: new Map((users.data ?? []).map((u) => [u.id, u.name])),
     machineName: new Map((machines.data ?? []).map((m) => [m.id, m.name])),
@@ -79,14 +81,16 @@ async function inventoryAssignedReport(db: Db, period: Period): Promise<ReportRe
 
   return {
     columns: [
-      { header: "Item", width: 115 },
-      { header: "Type", width: 70 },
-      { header: "Issued to", width: 60 },
-      { header: "Location", width: 75 },
-      { header: "Machine", width: 65 },
-      { header: "Issued date", width: 60 },
-      { header: "Qty issued", width: 40 },
-      { header: "Job #", width: 45 },
+      { header: "Item", width: 100 },
+      { header: "Type", width: 60 },
+      { header: "Issued to", width: 55 },
+      { header: "Location", width: 60 },
+      { header: "Machine", width: 50 },
+      { header: "Issued date", width: 52 },
+      { header: "Qty", width: 28 },
+      { header: "Balance", width: 32 },
+      { header: "Job #", width: 38 },
+      { header: "Drawing #", width: 38 },
     ],
     rows: (assignedRes.data ?? []).map((a) => [
       a.item_id != null ? (lookups.itemName.get(a.item_id) ?? `#${a.item_id}`) : "-",
@@ -96,7 +100,9 @@ async function inventoryAssignedReport(db: Db, period: Period): Promise<ReportRe
       a.machine_id != null ? (lookups.machineName.get(a.machine_id) ?? "-") : "-",
       a.issued_date ?? "-",
       String(a.qty_issued),
+      a.item_id != null ? String(lookups.itemBalance.get(a.item_id) ?? "-") : "-",
       a.job_number ?? "-",
+      a.drawing_number ?? "-",
     ]),
   };
 }

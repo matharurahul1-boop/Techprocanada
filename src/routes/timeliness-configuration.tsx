@@ -72,6 +72,11 @@ function TimelinessConfigurationPage() {
   const [reports, setReports] = useState<Tables<"generated_reports">[]>([]);
   const [reportsLoading, setReportsLoading] = useState(true);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selectedConfiguration = timelinessConfigurations.find((entry) => entry.id === selectedId) ?? null;
+  const visibleReports = selectedConfiguration
+    ? reports.filter((report) => String(report.configuration_id) === selectedConfiguration.id)
+    : reports;
 
   const refreshReports = () => {
     setReportsLoading(true);
@@ -96,6 +101,7 @@ function TimelinessConfigurationPage() {
     try {
       await generateReportNow({ data: { configurationId: Number(configuration.id) } });
       toast.success(`Report generated for "${configuration.reportName}".`);
+      setSelectedId(configuration.id);
       refreshReports();
     } catch (error) {
       console.error(error);
@@ -258,7 +264,21 @@ function TimelinessConfigurationPage() {
                 {timelinessConfigurations.map((configuration) => {
                   const submitter = users.find((user) => user.id === configuration.submittedByUserId);
                   return (
-                    <article key={configuration.id} className="grid gap-4 px-4 py-4 sm:grid-cols-[minmax(0,1.4fr)_minmax(9rem,0.8fr)_minmax(9rem,0.8fr)_auto] sm:items-center lg:px-5">
+                    <article
+                      key={configuration.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-pressed={selectedId === configuration.id}
+                      onClick={() => setSelectedId((current) => (current === configuration.id ? null : configuration.id))}
+                      onKeyDown={(event) => {
+                        if (event.target !== event.currentTarget) return;
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setSelectedId((current) => (current === configuration.id ? null : configuration.id));
+                        }
+                      }}
+                      className={`grid cursor-pointer gap-4 px-4 py-4 transition-colors hover:bg-panel/40 sm:grid-cols-[minmax(0,1.4fr)_minmax(9rem,0.8fr)_minmax(9rem,0.8fr)_auto] sm:items-center lg:px-5 ${selectedId === configuration.id ? "bg-panel/60 ring-1 ring-inset ring-accent-brand" : ""}`}
+                    >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-bold text-ink">{configuration.reportName}</p>
                         <p className="mt-1 text-xs text-muted-fg">{configuration.reportTable}</p>
@@ -276,7 +296,7 @@ function TimelinessConfigurationPage() {
                           type="button"
                           variant="ghost"
                           size="icon"
-                          onClick={() => void generateNow(configuration)}
+                          onClick={(event) => { event.stopPropagation(); void generateNow(configuration); }}
                           disabled={generatingId === configuration.id}
                           aria-label={`Generate report now for ${configuration.reportName}`}
                           title="Generate report now"
@@ -288,10 +308,15 @@ function TimelinessConfigurationPage() {
                             <FileText size={14} />
                           )}
                         </Button>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => openEdit(configuration)} aria-label={`Edit ${configuration.reportName}`} title="Edit" className="size-8 rounded-full bg-chip text-ink hover:bg-accent-brand hover:text-accent-brand-ink">
+                        <Button type="button" variant="ghost" size="icon" onClick={(event) => { event.stopPropagation(); openEdit(configuration); }} aria-label={`Edit ${configuration.reportName}`} title="Edit" className="size-8 rounded-full bg-chip text-ink hover:bg-accent-brand hover:text-accent-brand-ink">
                           <Pencil size={14} />
                         </Button>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => removeTimelinessConfiguration(configuration.id)} aria-label={`Remove ${configuration.reportName}`} title="Remove" className="size-8 rounded-full text-muted-fg hover:bg-warn-soft hover:text-warn">
+                        <Button type="button" variant="ghost" size="icon" onClick={(event) => {
+                          event.stopPropagation();
+                          if (!window.confirm(`Delete schedule "${configuration.reportName}"?`)) return;
+                          removeTimelinessConfiguration(configuration.id);
+                          setSelectedId((current) => (current === configuration.id ? null : current));
+                        }} aria-label={`Remove ${configuration.reportName}`} title="Remove" className="size-8 rounded-full text-muted-fg hover:bg-warn-soft hover:text-warn">
                           <Trash2 size={14} />
                         </Button>
                       </div>
@@ -305,28 +330,41 @@ function TimelinessConfigurationPage() {
 
         <section className="mt-8 min-w-0">
           <div className="mb-3 flex items-center justify-between gap-3 px-1">
-            <h2 className="font-display text-base font-semibold">Recent reports</h2>
-            <span className="shrink-0 font-mono text-[12px] text-muted-fg">
-              {reportsLoading ? "Loading…" : `${reports.length} generated`}
-            </span>
+            <h2 className="min-w-0 truncate font-display text-base font-semibold">
+              {selectedConfiguration ? `Recent reports · ${selectedConfiguration.reportName}` : "Recent reports"}
+            </h2>
+            <div className="flex shrink-0 items-center gap-3">
+              {selectedConfiguration && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedId(null)}
+                  className="rounded-full bg-chip px-3 py-1 text-[12px] font-semibold text-muted-fg transition hover:text-ink"
+                >
+                  Show all
+                </button>
+              )}
+              <span className="font-mono text-[12px] text-muted-fg">
+                {reportsLoading ? "Loading…" : `${visibleReports.length} generated`}
+              </span>
+            </div>
           </div>
 
           <div className="glass-surface overflow-hidden rounded-2xl border shadow-xl shadow-accent-brand/5">
-            {reports.length === 0 ? (
+            {visibleReports.length === 0 ? (
               <div className="px-5 py-12 text-center">
                 <FileText className="mx-auto mb-3 size-6 text-accent-brand" aria-hidden="true" />
                 <p className="text-sm font-semibold text-ink">
-                  {reportsLoading ? "Loading recent reports…" : "No reports generated yet"}
+                  {reportsLoading ? "Loading recent reports…" : selectedConfiguration ? "No reports for this schedule yet" : "No reports generated yet"}
                 </p>
                 {!reportsLoading && (
                   <p className="mt-1 text-xs text-muted-fg">
-                    Use the report icon on a schedule above to generate one now.
+                    {selectedConfiguration ? "Use its report icon above to generate one now." : "Click a schedule above to see its reports, or use the report icon to generate one now."}
                   </p>
                 )}
               </div>
             ) : (
               <div className="divide-y divide-line">
-                {reports.map((report) => {
+                {visibleReports.map((report) => {
                   const configuration = timelinessConfigurations.find(
                     (entry) => entry.id === String(report.configuration_id),
                   );
