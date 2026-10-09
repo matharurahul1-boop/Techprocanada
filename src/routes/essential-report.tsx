@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ClipboardCheck, Printer } from "lucide-react";
+import { ClipboardCheck, Printer, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { Shell } from "@/components/Shell";
+import { Shell, fieldClass } from "@/components/Shell";
 import techProLogo from "@/assets/techpro-logo.png";
 import { balanceOf, useStore } from "@/lib/store";
 
@@ -30,7 +30,6 @@ const escapeHtml = (value: string) =>
 type PrintRow = {
   name: string;
   type: string;
-  brand: string;
   threshold: number;
   balance: number;
   status: Status;
@@ -78,7 +77,6 @@ function printSheet(kind: "report" | "order", rows: PrintRow[], logoUrl: string)
         <td class="box"><span></span></td>
         <td class="l">${escapeHtml(r.name)}</td>
         <td class="l">${escapeHtml(r.type)}</td>
-        <td class="l">${escapeHtml(r.brand || "-")}</td>
         <td>${r.threshold}</td>
         <td>${r.balance}</td>
         <td class="${r.status.toLowerCase()}">${r.status}</td>
@@ -111,9 +109,9 @@ function printSheet(kind: "report" | "order", rows: PrintRow[], logoUrl: string)
 </div>
 ${meta}
 <table>
-  <thead><tr><th>#</th><th>${isOrder ? "Ordered" : "Check"}</th><th>Tool</th><th>Type</th><th>Brand</th><th>Threshold</th><th>Balance</th><th>Status</th><th>Qty to order</th><th>Notes</th></tr></thead>
-  <tbody>${body || `<tr><td colspan="10">Nothing to report.</td></tr>`}</tbody>
-  <tfoot><tr><td colspan="8" style="text-align:right">Total quantity to order</td><td>${totalQty}</td><td></td></tr></tfoot>
+  <thead><tr><th>#</th><th>${isOrder ? "Ordered" : "Check"}</th><th>Tool</th><th>Type</th><th>Threshold</th><th>Balance</th><th>Status</th><th>Qty to order</th><th>Notes</th></tr></thead>
+  <tbody>${body || `<tr><td colspan="9">Nothing to report.</td></tr>`}</tbody>
+  <tfoot><tr><td colspan="7" style="text-align:right">Total quantity to order</td><td>${totalQty}</td><td></td></tr></tfoot>
 </table>
 ${sign}
 <div class="foot">Generated ${today} from TechPro Inventory Console</div>
@@ -123,18 +121,13 @@ ${sign}
 }
 
 function EssentialReportPage() {
-  const { items, toolTypes, orders, brands } = useStore();
+  const { items, toolTypes } = useStore();
+  const [search, setSearch] = useState("");
   const [onlyNeeded, setOnlyNeeded] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [orderQty, setOrderQty] = useState<Record<string, string>>({});
   const [initialised, setInitialised] = useState(false);
 
-  const lastBrandName = (itemId: string) => {
-    const last = orders
-      .filter((o) => o.itemId === itemId && o.brandId)
-      .sort((a, b) => b.purchaseDate.localeCompare(a.purchaseDate))[0];
-    return last ? (brands.find((b) => b.id === last.brandId)?.name ?? "") : "";
-  };
   const logoUrl = () => new URL(techProLogo, window.location.origin).href;
 
   const typeName = (id: string) => toolTypes.find((t) => t.id === id)?.name ?? "Unassigned";
@@ -172,7 +165,13 @@ function EssentialReportPage() {
     setInitialised(true);
   }, [rows, initialised]);
 
-  const visible = onlyNeeded ? rows.filter((r) => r.status !== "OK") : rows;
+  const query = search.trim().toLowerCase();
+  // A search looks through every essential tool, not just the ones needing an order.
+  const visible = query
+    ? rows.filter((r) => r.name.toLowerCase().includes(query) || r.type.toLowerCase().includes(query))
+    : onlyNeeded
+      ? rows.filter((r) => r.status !== "OK")
+      : rows;
   const qtyFor = (row: { id: string; suggested: number }) => {
     const typed = orderQty[row.id];
     return typed !== undefined && typed !== "" ? Math.max(0, Number(typed) || 0) : row.suggested;
@@ -180,7 +179,6 @@ function EssentialReportPage() {
   const toPrintRow = (row: (typeof rows)[number]): PrintRow => ({
     name: row.name,
     type: row.type,
-    brand: lastBrandName(row.id),
     threshold: row.threshold,
     balance: row.balance,
     status: row.status,
@@ -227,6 +225,28 @@ function EssentialReportPage() {
           </div>
 
           <div className="glass-surface mb-3 flex flex-wrap items-center gap-2 rounded-xl border p-2">
+            <label className="relative block min-w-[12rem] flex-1 sm:max-w-sm">
+              <span className="sr-only">Search essential tools</span>
+              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-fg" />
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search tools"
+                className={`${fieldClass} pl-9`}
+              />
+            </label>
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                aria-label="Clear search"
+                title="Clear search"
+                className="grid size-10 shrink-0 place-items-center rounded-lg text-muted-fg transition hover:bg-chip hover:text-ink"
+              >
+                <X size={16} />
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setOnlyNeeded((v) => !v)}
@@ -237,7 +257,7 @@ function EssentialReportPage() {
                   : "bg-panel text-muted-fg ring-line hover:text-ink"
               }`}
             >
-              {onlyNeeded ? "Showing: needs ordering" : "Showing: all essentials"}
+              {query ? "Search: all essentials" : onlyNeeded ? "Showing: needs ordering" : "Showing: all essentials"}
             </button>
             <div className="ml-auto flex flex-wrap gap-2">
               <button
@@ -279,12 +299,14 @@ function EssentialReportPage() {
             {visible.length === 0 ? (
               <div className="px-5 py-14 text-center">
                 <p className="text-sm font-semibold">
-                  {rows.length === 0 ? "No essential tools yet" : "All essential tools are stocked"}
+                  {rows.length === 0 ? "No essential tools yet" : query ? "No matching tools" : "All essential tools are stocked"}
                 </p>
                 <p className="mt-1 text-[12px] text-muted-fg">
                   {rows.length === 0
                     ? "Turn on “Essentials” for an item in Inventory Items to track it here."
-                    : "Nothing is missing or below its threshold right now."}
+                    : query
+                      ? "Try a different tool name or type."
+                      : "Nothing is missing or below its threshold right now."}
                 </p>
               </div>
             ) : (
