@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CheckCircle2, CircleDollarSign, Clock, Pencil, Trash2 } from "lucide-react";
+import { CheckCircle2, CircleDollarSign, Clock, Pencil, Printer, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Shell } from "@/components/Shell";
 import { Pagination } from "@/components/Pagination";
 import { EditOrderSheet } from "@/components/edit-sheets";
+import { missingPriceRows, printMissingPricesForm } from "@/lib/missing-prices-form";
 import { removeOrder, updateOrder, useStore } from "@/lib/store";
 
 const PAGE_SIZE = 20;
@@ -31,7 +32,7 @@ export const Route = createFileRoute("/fill-amount")({
 });
 
 function FillAmountPage() {
-  const { orders, items, brands } = useStore();
+  const { orders, items, brands, toolTypes } = useStore();
   const [filter, setFilter] = useState<"all" | "confirmed" | "unconfirmed">("unconfirmed");
   const [page, setPage] = useState(1);
   const [editId, setEditId] = useState<string | null>(null);
@@ -154,7 +155,17 @@ function FillAmountPage() {
 
         <section className="min-w-0">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
-            <h2 className="font-display text-base font-semibold">Orders</h2>
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="font-display text-base font-semibold">Orders</h2>
+              <button
+              type="button"
+              onClick={() => printMissingPricesForm(missingPriceRows(orders, items, brands, toolTypes))}
+              className="inline-flex h-9 items-center gap-2 rounded-xl bg-chip px-3 text-[12px] font-semibold text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
+              title="Print a form listing every tool whose orders have no price"
+            >
+              <Printer size={14} /> Missing prices form ({missingPriceRows(orders, items, brands, toolTypes).length})
+            </button>
+            </div>
             <div className="flex gap-1.5">
               {(["unconfirmed", "confirmed", "all"] as const).map((key) => (
                 <button

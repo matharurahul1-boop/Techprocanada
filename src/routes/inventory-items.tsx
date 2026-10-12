@@ -59,7 +59,6 @@ function InventoryItemsPage() {
   const [issuedFrom, setIssuedFrom] = useState<"Admin" | "HR">("Admin");
   const [issuedDate, setIssuedDate] = useState("");
   const [qtyIssued, setQtyIssued] = useState("");
-  const [assignBrandId, setAssignBrandId] = useState("");
   const [remarks, setRemarks] = useState("");
   const [jobNumber, setJobNumber] = useState("");
   const [drawingNumber, setDrawingNumber] = useState("");
@@ -199,7 +198,6 @@ function InventoryItemsPage() {
 
   const assignItem = items.find((i) => i.id === assignItemId) ?? null;
   const selectedUser = issuedTo || users[0]?.id || "";
-  const selectedAssignBrand = assignBrandId || brands[0]?.id || "";
   const itemAssignments = assignments.filter((a) => a.itemId === assignItemId);
   const userName = (id: string) => users.find((u) => u.id === id)?.name ?? "Unassigned";
 
@@ -209,7 +207,6 @@ function InventoryItemsPage() {
     setIssuedFrom("Admin");
     setIssuedDate("");
     setQtyIssued("");
-    setAssignBrandId("");
     setRemarks("");
     setJobNumber("");
     setDrawingNumber("");
@@ -226,7 +223,7 @@ function InventoryItemsPage() {
       issuedFrom,
       issuedDate,
       qtyIssued: Number(qtyIssued) || 0,
-      brandId: selectedAssignBrand,
+      brandId: "",
       remarks,
       jobNumber,
       drawingNumber,
@@ -806,28 +803,6 @@ function InventoryItemsPage() {
             </div>
           </div>
 
-          <label className={labelClass} htmlFor="assign-brand">
-            Brand
-          </label>
-          <div className="relative mb-4">
-            <select
-              id="assign-brand"
-              value={selectedAssignBrand}
-              onChange={(e) => setAssignBrandId(e.target.value)}
-              className={`${fieldClass} appearance-none pr-9`}
-            >
-              {brands.length === 0 && <option value="">Add a brand first</option>}
-              {brands.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-            <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs text-muted-fg">
-              ▾
-            </span>
-          </div>
-
           <div className="mb-4 grid grid-cols-2 gap-3">
             <div>
               <label className={labelClass} htmlFor="job-number">
@@ -888,7 +863,7 @@ function InventoryItemsPage() {
                       {userName(a.userId)} · {a.qtyIssued} qty
                     </p>
                     <p className="truncate font-mono text-[11px] text-muted-fg">
-                      {a.issuedDate} · {a.issuedFrom} · {brandName(a.brandId)}
+                      {a.issuedDate} · {a.issuedFrom}
                     </p>
                     {(a.jobNumber || a.drawingNumber) && (
                       <p className="truncate font-mono text-[11px] text-muted-fg">

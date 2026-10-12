@@ -277,12 +277,11 @@ export function EditAssignmentSheet({
   assignment: ToolAssignment | null;
   onClose: () => void;
 }) {
-  const { users, brands, machines, items } = useStore();
+  const { users, machines, items } = useStore();
   const [form, setForm] = useState({
     userId: "",
     issuedDate: "",
     qty: "",
-    brandId: "",
     location: "",
     machineId: "",
     jobNumber: "",
@@ -296,7 +295,6 @@ export function EditAssignmentSheet({
       userId: assignment.userId,
       issuedDate: assignment.issuedDate,
       qty: String(assignment.qtyIssued),
-      brandId: assignment.brandId,
       location: assignment.location,
       machineId: assignment.machineId,
       jobNumber: assignment.jobNumber,
@@ -314,7 +312,6 @@ export function EditAssignmentSheet({
       userId: form.userId,
       issuedDate: form.issuedDate,
       qtyIssued: Number(form.qty) || 0,
-      brandId: form.brandId,
       location: form.location.trim(),
       machineId: form.machineId,
       jobNumber: form.jobNumber.trim(),
@@ -381,15 +378,6 @@ export function EditAssignmentSheet({
             />
           </div>
         </div>
-
-        <SelectField id="edit-assign-brand" label="Brand" value={form.brandId} onChange={set("brandId")}>
-          <option value="">No brand</option>
-          {brands.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.name}
-            </option>
-          ))}
-        </SelectField>
 
         <div className="mb-4 grid grid-cols-2 gap-3">
           <div>

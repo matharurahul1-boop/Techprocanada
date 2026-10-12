@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { FileText, Pencil, Search, Trash2, X } from "lucide-react";
+import { FileText, Pencil, Printer, Search, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Shell, fieldClass } from "@/components/Shell";
 import { Pagination } from "@/components/Pagination";
 import { DetailSheet, EditOrderSheet, formatDate } from "@/components/edit-sheets";
+import { missingPriceRows, printMissingPricesForm } from "@/lib/missing-prices-form";
 import { removeOrder, updateOrder, useStore } from "@/lib/store";
 
 const PAGE_SIZE = 15;
@@ -31,7 +32,7 @@ export const Route = createFileRoute("/tools-order-log")({
 });
 
 function ToolsOrderLogPage() {
-  const { orders, items, brands } = useStore();
+  const { orders, items, brands, toolTypes } = useStore();
   const [tool, setTool] = useState("");
   const [brand, setBrand] = useState("");
   const [quantity, setQuantity] = useState("");
@@ -118,9 +119,19 @@ function ToolsOrderLogPage() {
         <section className="min-w-0">
           <div className="mb-3 flex items-center justify-between px-1">
             <h2 className="font-display text-base font-semibold">Ordered tools</h2>
-            <span className="font-mono text-[12px] text-muted-fg">
-              {rows.length} of {orders.length} records
-            </span>
+            <div className="flex items-center gap-3">
+              <button
+              type="button"
+              onClick={() => printMissingPricesForm(missingPriceRows(orders, items, brands, toolTypes))}
+              className="inline-flex h-9 items-center gap-2 rounded-xl bg-chip px-3 text-[12px] font-semibold text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
+              title="Print a form listing every tool whose orders have no price"
+            >
+              <Printer size={14} /> Missing prices form ({missingPriceRows(orders, items, brands, toolTypes).length})
+            </button>
+              <span className="font-mono text-[12px] text-muted-fg">
+                {rows.length} of {orders.length} records
+              </span>
+            </div>
           </div>
 
           <div className="glass-surface mb-3 grid gap-2 rounded-xl border p-2 sm:grid-cols-2 lg:grid-cols-[minmax(12rem,1fr)_repeat(4,minmax(8rem,0.6fr))_auto]">

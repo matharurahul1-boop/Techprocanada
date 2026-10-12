@@ -96,7 +96,7 @@ export function ToolAssignedLogPage({
   eyebrow?: string;
   title?: string;
 } = {}) {
-  const { assignments, items, toolTypes, users, machines, brands } = useStore();
+  const { assignments, items, toolTypes, users, machines } = useStore();
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [activePreset, setActivePreset] = useState<PresetKey>("all");
@@ -167,7 +167,6 @@ export function ToolAssignedLogPage({
 
   const detailRow = rows.find((row) => row.id === detailId) ?? null;
   const editAssignment: ToolAssignment | null = assignments.find((a) => a.id === editId) ?? null;
-  const brandName = (id: string) => brands.find((b) => b.id === id)?.name ?? "";
 
   const askDelete = (row: { id: string; toolName: string; recipientName: string }) => {
     if (window.confirm(`Delete this record (${row.toolName} -> ${row.recipientName})? The item's issued count will be restored.`)) {
@@ -375,7 +374,6 @@ export function ToolAssignedLogPage({
                 ["Issued date", formatDate(detailRow.issuedDate)],
                 ["Qty issued", String(detailRow.qtyIssued)],
                 ["Balance now", String(detailRow.balance)],
-                ["Brand", brandName(detailRow.brandId)],
                 ["Location", detailRow.location],
                 ["Machine", detailRow.machineName],
                 ["Job no.", detailRow.jobNumber],
