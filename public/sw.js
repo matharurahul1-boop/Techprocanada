@@ -1,4 +1,6 @@
-const CACHE = "techpro-shell-v2";
+// Bumped from v2: that version cached every script, including the dev server's source
+// modules, so reloads kept serving stale code. Activating this one deletes that cache.
+const CACHE = "techpro-shell-v3";
 const APP_SHELL = ["/", "/manifest.webmanifest", "/favicon.png"];
 
 self.addEventListener("install", (event) => {
@@ -64,7 +66,15 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Static assets: cache-first, refresh in the background (stale-while-revalidate).
+  // Only files that never change under the same URL are cached: the build's hashed
+  // /assets/ files and the shell files above. Everything else always comes from the
+  // network - in particular the dev server's modules (/src/..., /node_modules/.vite/...),
+  // whose content changes while the URL stays the same, and any API or server-function
+  // responses, which must never be served stale.
+  const cacheable = url.pathname.startsWith("/assets/") || APP_SHELL.includes(url.pathname);
+  if (!cacheable) return;
+
+  // Cached files: cache-first, refresh in the background (stale-while-revalidate).
   event.respondWith(
     caches.match(request).then((cached) => {
       const network = fetch(request)

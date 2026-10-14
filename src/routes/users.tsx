@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Shell } from "@/components/Shell";
+import { useConfirmDelete } from "@/components/confirm-delete";
 import { Pagination } from "@/components/Pagination";
 
 import { removeUser, setUserActive, useStore } from "@/lib/store";
@@ -31,6 +32,7 @@ export const Route = createFileRoute("/users")({
 
 function UsersPage() {
   const { users, assignments } = useStore();
+  const { confirmDelete, confirmDialog } = useConfirmDelete();
   const [page, setPage] = useState(1);
 
   const pageCount = Math.max(1, Math.ceil(users.length / PAGE_SIZE));
@@ -88,7 +90,8 @@ function UsersPage() {
                     {user.isActive ? "Deactivate" : "Activate"}
                   </button>
                   <button
-                    onClick={() => removeUser(user.id)}
+                    onClick={() =>
+                      confirmDelete({ title: `Delete user ${user.name}?`, description: "This cannot be undone.", onConfirm: () => removeUser(user.id) })}
                     aria-label={`Remove ${user.name}`}
                     title="Remove"
                     className="grid size-8 shrink-0 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn"
@@ -110,6 +113,7 @@ function UsersPage() {
           />
         </section>
       </div>
+      {confirmDialog}
     </Shell>
   );
 }

@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { Shell, fieldClass, labelClass } from "@/components/Shell";
+import { useConfirmDelete } from "@/components/confirm-delete";
 import { AddButton, Sheet } from "@/components/Sheet";
 import { Pagination } from "@/components/Pagination";
 
@@ -32,6 +33,7 @@ export const Route = createFileRoute("/brand")({
 
 function BrandPage() {
   const { brands, orders } = useStore();
+  const { confirmDelete, confirmDialog } = useConfirmDelete();
   const [name, setName] = useState("");
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -130,7 +132,8 @@ function BrandPage() {
                       <Pencil size={14} />
                     </button>
                     <button
-                      onClick={() => removeBrand(brand.id)}
+                      onClick={() =>
+                        confirmDelete({ title: `Delete brand ${brand.name}?`, description: "This cannot be undone.", onConfirm: () => removeBrand(brand.id) })}
                       aria-label={`Remove ${brand.name}`}
                       title="Remove"
                       className="grid size-8 shrink-0 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn"
@@ -153,6 +156,7 @@ function BrandPage() {
           />
         </section>
       </div>
+      {confirmDialog}
     </Shell>
   );
 }

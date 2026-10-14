@@ -4,9 +4,10 @@ import { useEffect, useState, type FormEvent } from "react";
 
 import { Shell, fieldClass, labelClass } from "@/components/Shell";
 import { AddButton, Sheet } from "@/components/Sheet";
-import { Pagination } from "@/components/Pagination";
+import { DataList } from "@/components/DataList";
+import { useConfirmDelete } from "@/components/confirm-delete";
 import { DetailSheet, EditMachineHourSheet, formatDate } from "@/components/edit-sheets";
-import { addMachineHour, removeMachineHour, useStore } from "@/lib/store";
+import { addMachineHour, removeMachineHour, useStore, type MachineHour } from "@/lib/store";
 
 const PAGE_SIZE = 20;
 
@@ -63,21 +64,22 @@ function MachineHoursPage() {
 
   const totalHours = filteredEntries.reduce((sum, entry) => sum + entry.hours, 0);
 
-  const pageCount = Math.max(1, Math.ceil(filteredEntries.length / PAGE_SIZE));
-  const currentPage = Math.min(page, pageCount);
-  const visibleEntries = filteredEntries.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   useEffect(() => setPage(1), [search]);
 
   const detailEntry = machineHours.find((entry) => entry.id === detailId) ?? null;
   const editEntry = machineHours.find((entry) => entry.id === editId) ?? null;
 
-  const askDelete = (id: string, machine: string) => {
-    if (window.confirm(`Delete this machine hours entry for ${machine}?`)) {
-      removeMachineHour(id);
-      setDetailId((current) => (current === id ? null : current));
-    }
-  };
+  const { confirmDelete, confirmDialog } = useConfirmDelete();
+  const askDelete = (id: string, machine: string) =>
+    confirmDelete({
+      title: `Delete this machine hours entry for ${machine}?`,
+      description: "This cannot be undone.",
+      onConfirm: () => {
+        removeMachineHour(id);
+        setDetailId((current) => (current === id ? null : current));
+      },
+    });
 
   const openNew = () => {
     setForm({ ...emptyForm, machineId: machines[0]?.id ?? "", operatorId: users[0]?.id ?? "" });
@@ -104,6 +106,33 @@ function MachineHoursPage() {
     });
     closeSheet();
   };
+
+  const rowActions = (entry: MachineHour) => (
+    <div className="flex items-center justify-center gap-1.5">
+      <button
+        onClick={(event) => {
+          event.stopPropagation();
+          setEditId(entry.id);
+        }}
+        aria-label={`Edit entry for ${machineName(entry.machineId)}`}
+        title="Edit"
+        className="grid size-8 shrink-0 place-items-center rounded-full bg-chip text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
+      >
+        <Pencil size={14} />
+      </button>
+      <button
+        onClick={(event) => {
+          event.stopPropagation();
+          askDelete(entry.id, machineName(entry.machineId));
+        }}
+        aria-label={`Delete entry for ${machineName(entry.machineId)}`}
+        title="Delete"
+        className="grid size-8 shrink-0 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn"
+      >
+        <Trash2 size={14} />
+      </button>
+    </div>
+  );
 
   return (
     <Shell
@@ -253,125 +282,68 @@ function MachineHoursPage() {
             )}
           </div>
 
-          <div className="glass-surface overflow-hidden rounded-2xl border shadow-xl shadow-accent-brand/5">
-            <div className="hidden items-center gap-4 border-b border-line px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-fg lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem_6rem_8rem_5.5rem]">
-              <span>Machine</span>
-              <span>Operator</span>
-              <span className="text-right">Date</span>
-              <span className="text-right">Hours</span>
-              <span>Job #</span>
-              <span className="text-center">Actions</span>
-            </div>
-
-            <div className="divide-y divide-line">
-              {filteredEntries.length === 0 && (
-                <p className="px-4 py-8 text-center text-sm text-muted-fg">
-                  {machineHours.length === 0
-                    ? "No machine hours logged yet."
-                    : "No entries match this search."}
-                </p>
-              )}
-              {visibleEntries.map((entry) => (
-                <div
-                  key={entry.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setDetailId(entry.id)}
-                  onKeyDown={(event) => {
-                    if (event.target !== event.currentTarget) return;
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      setDetailId(entry.id);
-                    }
-                  }}
-                  className="cursor-pointer px-4 py-3.5 transition-colors hover:bg-panel/40 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem_6rem_8rem_5.5rem] lg:items-center lg:gap-4"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{machineName(entry.machineId)}</p>
-                    <p className="truncate text-[12px] text-muted-fg lg:hidden">
-                      {operatorName(entry.operatorId)}
-                    </p>
-                  </div>
-                  <span className="hidden truncate text-[13px] text-muted-fg lg:block">
-                    {operatorName(entry.operatorId)}
+          <DataList
+            rows={filteredEntries}
+            pagination={{ page, onPageChange: setPage, pageSize: PAGE_SIZE, itemLabel: "entries" }}
+            rowKey={(entry) => entry.id}
+            onRowClick={(entry) => setDetailId(entry.id)}
+            empty={
+              <p className="px-4 py-8 text-center text-sm text-muted-fg">
+                {machineHours.length === 0 ? "No machine hours logged yet." : "No entries match this search."}
+              </p>
+            }
+            columns={[
+              {
+                header: "Machine",
+                sortValue: (entry) => machineName(entry.machineId),
+                width: "minmax(0,1fr)",
+                cell: (entry) => <p className="truncate text-sm font-semibold">{machineName(entry.machineId)}</p>,
+              },
+              {
+                header: "Operator",
+                sortValue: (entry) => operatorName(entry.operatorId),
+                width: "minmax(0,1fr)",
+                cell: (entry) => (
+                  <span className="block truncate text-[13px] text-muted-fg">{operatorName(entry.operatorId)}</span>
+                ),
+              },
+              {
+                header: "Date",
+                sortValue: (entry) => entry.workDate,
+                width: "6rem",
+                align: "right",
+                cell: (entry) => <span className="font-mono text-[13px] text-muted-fg">{formatDate(entry.workDate)}</span>,
+              },
+              {
+                header: "Hours",
+                sortValue: (entry) => entry.hours,
+                width: "6rem",
+                align: "right",
+                cell: (entry) => <span className="font-mono text-[13px] font-semibold">{entry.hours}</span>,
+              },
+              {
+                header: "Job #",
+                sortValue: (entry) => entry.jobNumber,
+                width: "8rem",
+                cell: (entry) => (
+                  <span className="block truncate font-mono text-[12px] text-muted-fg">{entry.jobNumber || "—"}</span>
+                ),
+              },
+              { header: "Actions", width: "5.5rem", align: "center", cell: rowActions },
+            ]}
+            card={(entry) => (
+              <>
+                <p className="truncate text-sm font-semibold">{machineName(entry.machineId)}</p>
+                <p className="truncate text-[12px] text-muted-fg">{operatorName(entry.operatorId)}</p>
+                <div className="mt-2 flex items-center justify-between gap-3">
+                  <span className="font-mono text-[11px] text-muted-fg">
+                    {formatDate(entry.workDate)} · <span className="text-ink">{entry.hours} hrs</span>
+                    {entry.jobNumber ? ` · ${entry.jobNumber}` : ""}
                   </span>
-                  <span className="hidden text-right font-mono text-[13px] text-muted-fg lg:block">
-                    {entry.workDate}
-                  </span>
-                  <span className="hidden text-right font-mono text-[13px] font-semibold lg:block">
-                    {entry.hours}
-                  </span>
-                  <span className="hidden truncate font-mono text-[12px] text-muted-fg lg:block">
-                    {entry.jobNumber || "—"}
-                  </span>
-
-                  <div className="mt-2 flex items-center justify-between gap-3 lg:hidden">
-                    <span className="font-mono text-[11px] text-muted-fg">
-                      {entry.workDate} · <span className="text-ink">{entry.hours} hrs</span>
-                      {entry.jobNumber ? ` · ${entry.jobNumber}` : ""}
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setEditId(entry.id);
-                        }}
-                        aria-label={`Edit entry for ${machineName(entry.machineId)}`}
-                        title="Edit"
-                        className="grid size-8 shrink-0 place-items-center rounded-full bg-chip text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          askDelete(entry.id, machineName(entry.machineId));
-                        }}
-                        aria-label={`Delete entry for ${machineName(entry.machineId)}`}
-                        title="Delete"
-                        className="grid size-8 shrink-0 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="hidden items-center justify-center gap-1.5 lg:flex">
-                    <button
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setEditId(entry.id);
-                      }}
-                      aria-label={`Edit entry for ${machineName(entry.machineId)}`}
-                      title="Edit"
-                      className="grid size-8 place-items-center rounded-full bg-chip text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
-                    >
-                      <Pencil size={14} />
-                    </button>
-                    <button
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        askDelete(entry.id, machineName(entry.machineId));
-                      }}
-                      aria-label={`Delete entry for ${machineName(entry.machineId)}`}
-                      title="Delete"
-                      className="grid size-8 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
+                  {rowActions(entry)}
                 </div>
-              ))}
-            </div>
-          </div>
-
-          <Pagination
-            page={currentPage}
-            pageCount={pageCount}
-            onPageChange={setPage}
-            totalCount={filteredEntries.length}
-            pageSize={PAGE_SIZE}
-            itemLabel="entries"
+              </>
+            )}
           />
         </section>
       </div>
@@ -418,6 +390,7 @@ function MachineHoursPage() {
         }
       />
       <EditMachineHourSheet entry={editEntry} onClose={() => setEditId(null)} />
+      {confirmDialog}
     </Shell>
   );
 }

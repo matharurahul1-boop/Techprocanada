@@ -3,7 +3,7 @@ import { CalendarRange, DollarSign, TrendingUp } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Shell } from "@/components/Shell";
-import { Pagination } from "@/components/Pagination";
+import { DataList } from "@/components/DataList";
 import { useStore } from "@/lib/store";
 
 const PAGE_SIZE = 20;
@@ -62,10 +62,8 @@ function MonthlyExpensePage() {
   );
   const maxTotal = Math.max(1, ...months.map((m) => m.total));
 
-  const pageCount = Math.max(1, Math.ceil(months.length / PAGE_SIZE));
-  const currentPage = Math.min(page, pageCount);
   const chronological = [...months];
-  const tableRows = [...months].reverse().slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const tableRows = [...months].reverse();
 
   return (
     <Shell eyebrow="Procurement" title="Monthly Expense">
@@ -135,41 +133,47 @@ function MonthlyExpensePage() {
             <span className="font-mono text-[12px] text-muted-fg">{months.length} months</span>
           </div>
 
-          <div className="glass-surface overflow-hidden rounded-2xl border shadow-xl shadow-accent-brand/5">
-            <div className="hidden grid-cols-[minmax(10rem,1fr)_8rem_8rem] items-center gap-4 border-b border-line px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-fg lg:grid">
-              <span>Month</span>
-              <span className="text-right">Orders</span>
-              <span className="text-right">Total spend</span>
-            </div>
-            {tableRows.length === 0 ? (
+          <DataList
+            rows={tableRows}
+            pagination={{ page, onPageChange: setPage, pageSize: PAGE_SIZE, itemLabel: "months" }}
+            rowKey={(m) => `${m.year}-${m.month}`}
+            empty={
               <p className="px-4 py-8 text-center text-sm text-muted-fg">No purchase orders logged yet.</p>
-            ) : (
-              <div className="divide-y divide-line">
-                {tableRows.map((m) => (
-                  <div
-                    key={`${m.year}-${m.month}`}
-                    className="flex items-center justify-between gap-3 px-4 py-3.5 lg:grid lg:grid-cols-[minmax(10rem,1fr)_8rem_8rem]"
-                  >
-                    <p className="text-sm font-semibold">
-                      {MONTH_NAMES[m.month - 1]} {m.year}
-                    </p>
-                    <p className="hidden text-right font-mono text-[13px] text-muted-fg lg:block">
-                      {m.count}
-                    </p>
-                    <p className="text-right font-mono text-sm font-semibold">{currency.format(m.total)}</p>
-                  </div>
-                ))}
+            }
+            columns={[
+              {
+                header: "Month",
+                sortValue: (m) => m.year * 100 + m.month,
+                width: "minmax(10rem,1fr)",
+                cell: (m) => (
+                  <p className="text-sm font-semibold">
+                    {MONTH_NAMES[m.month - 1]} {m.year}
+                  </p>
+                ),
+              },
+              {
+                header: "Orders",
+                sortValue: (m) => m.count,
+                width: "8rem",
+                align: "right",
+                cell: (m) => <p className="font-mono text-[13px] text-muted-fg">{m.count}</p>,
+              },
+              {
+                header: "Total spend",
+                sortValue: (m) => m.total,
+                width: "8rem",
+                align: "right",
+                cell: (m) => <p className="font-mono text-sm font-semibold">{currency.format(m.total)}</p>,
+              },
+            ]}
+            card={(m) => (
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold">
+                  {MONTH_NAMES[m.month - 1]} {m.year}
+                </p>
+                <p className="text-right font-mono text-sm font-semibold">{currency.format(m.total)}</p>
               </div>
             )}
-          </div>
-
-          <Pagination
-            page={currentPage}
-            pageCount={pageCount}
-            onPageChange={setPage}
-            totalCount={months.length}
-            pageSize={PAGE_SIZE}
-            itemLabel="months"
           />
         </section>
       </div>

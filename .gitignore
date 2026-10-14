@@ -31,3 +31,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Old-system MySQL dump and the generated import: real company data, never committed
+supabase/legacy/data/

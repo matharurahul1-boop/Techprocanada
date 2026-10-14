@@ -5,6 +5,8 @@ import { toast } from "sonner";
 
 import { Shell, fieldClass, labelClass } from "@/components/Shell";
 import { AddButton, Sheet } from "@/components/Sheet";
+import { formatDate } from "@/components/edit-sheets";
+import { useConfirmDelete } from "@/components/confirm-delete";
 import { Button } from "@/components/ui/button";
 import {
   addTimelinessConfiguration,
@@ -73,6 +75,7 @@ function TimelinessConfigurationPage() {
   const [reportsLoading, setReportsLoading] = useState(true);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const { confirmDelete, confirmDialog } = useConfirmDelete();
   const selectedConfiguration = timelinessConfigurations.find((entry) => entry.id === selectedId) ?? null;
   const visibleReports = selectedConfiguration
     ? reports.filter((report) => String(report.configuration_id) === selectedConfiguration.id)
@@ -313,9 +316,14 @@ function TimelinessConfigurationPage() {
                         </Button>
                         <Button type="button" variant="ghost" size="icon" onClick={(event) => {
                           event.stopPropagation();
-                          if (!window.confirm(`Delete schedule "${configuration.reportName}"?`)) return;
-                          removeTimelinessConfiguration(configuration.id);
-                          setSelectedId((current) => (current === configuration.id ? null : current));
+                          confirmDelete({
+                            title: `Delete schedule "${configuration.reportName}"?`,
+                            description: "Reports will no longer be generated for it.",
+                            onConfirm: () => {
+                              removeTimelinessConfiguration(configuration.id);
+                              setSelectedId((current) => (current === configuration.id ? null : current));
+                            },
+                          });
                         }} aria-label={`Remove ${configuration.reportName}`} title="Remove" className="size-8 rounded-full text-muted-fg hover:bg-warn-soft hover:text-warn">
                           <Trash2 size={14} />
                         </Button>
@@ -384,7 +392,7 @@ function TimelinessConfigurationPage() {
                       <div className="text-xs">
                         <span className="text-muted-fg sm:block">Period</span>
                         <span className="font-mono font-bold text-ink">
-                          {report.period_start} → {report.period_end}
+                          {formatDate(report.period_start)} → {formatDate(report.period_end)}
                         </span>
                       </div>
                       <div className="flex items-center justify-end gap-1.5">
@@ -400,7 +408,8 @@ function TimelinessConfigurationPage() {
                         </Button>
                         <button
                           type="button"
-                          onClick={() => void removeReport(report)}
+                          onClick={() =>
+                            confirmDelete({ title: "Delete this report?", description: "The generated file will be removed.", onConfirm: () => void removeReport(report) })}
                           aria-label="Delete report"
                           title="Delete"
                           className="grid size-9 shrink-0 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn"
@@ -416,6 +425,7 @@ function TimelinessConfigurationPage() {
           </div>
         </section>
       </div>
+      {confirmDialog}
     </Shell>
   );
 }

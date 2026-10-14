@@ -18,7 +18,10 @@ export default defineConfig({
       // -> actions.functions.ts), so Vite's cold-start crawler misses it and
       // only discovers it once that route is first opened - which triggers a
       // live re-optimize + reload. Pre-including it avoids that one case.
-      include: ["zod"],
+      // exceljs is the same: it is only loaded by a dynamic import when a table's
+      // Import / Export button is used. Found that late, the re-optimize left pages
+      // holding two copies of React ("Invalid hook call ... reading 'useState'").
+      include: ["zod", "exceljs"],
     },
   },
 });
