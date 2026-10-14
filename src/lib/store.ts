@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesUpdate } from "@/integrations/supabase/types";
 import { notifyLowStock } from "@/lib/push/actions.functions";
+import { daysLeft as daysBetween } from "@/lib/job-format";
 
 export type ToolType = { id: string; name: string };
 
@@ -20,7 +21,160 @@ export type InventoryItem = {
 
 export type Brand = { id: string; name: string };
 
-export type Company = { id: string; name: string };
+export type CompanyPriority = "Low" | "Modest" | "High";
+
+export type Company = {
+  id: string;
+  name: string;
+  priority: CompanyPriority;
+  address: string;
+  contactNumber: string;
+};
+
+export type CompanyInput = Omit<Company, "id">;
+
+// In the order of the old system's status dropdown (its codes 1, 2, 3, 5, 6, 7, 8).
+export const JOB_STATUSES = [
+  "In Progress",
+  "Completed",
+  "Not Started",
+  "Mistake",
+  "Shipped",
+  "Requires Attention",
+  "Partially Completed",
+] as const;
+
+export type JobStatus = (typeof JOB_STATUSES)[number];
+
+/** The old system's numeric job status codes (mii_job_number.status). */
+export const JOB_STATUS_CODE: Record<JobStatus, number> = {
+  "In Progress": 1,
+  Completed: 2,
+  "Not Started": 3,
+  Mistake: 5,
+  Shipped: 6,
+  "Requires Attention": 7,
+  "Partially Completed": 8,
+};
+
+const jobStatusFromCode = (code: number | null): JobStatus =>
+  JOB_STATUSES.find((status) => JOB_STATUS_CODE[status] === code) ?? "Not Started";
+
+/** Currency codes used by the old system's jobs (mii_job_number.currency). */
+export const CURRENCIES: Record<number, string> = { 1: "CAD", 2: "USD" };
+
+export type Job = {
+  id: string;
+  companyId: string;
+  jobNumber: string;
+  date: string;
+  dueDate: string;
+  numberOfItems: number;
+  completedItems: number;
+  job: string;
+  status: JobStatus;
+  poNumber: string;
+  shipDate: string;
+  // Storage paths inside the "packing-slips" bucket.
+  packingSlips: string[];
+  priority: boolean;
+};
+
+export type JobInput = Omit<Job, "id">;
+
+export type MachiningHour = {
+  id: string;
+  date: string;
+  userId: string;
+  machineId: string;
+  description: string;
+  jobId: string;
+  drawingNumber: string;
+  // Time worked, in whole minutes (shown as h:mm); null when not entered.
+  durationMinutes: number | null;
+  // Pieces worked on; null when not entered.
+  quantity: number | null;
+};
+
+export type MachiningHourInput = Omit<MachiningHour, "id">;
+
+// Drawings use the same statuses, in the same order, as jobs.
+export const MII_ORDER_STATUSES = JOB_STATUSES;
+
+export type MiiOrderStatus = (typeof MII_ORDER_STATUSES)[number];
+
+export type MiiOrderDetail = {
+  id: string;
+  jobId: string;
+  drawingNumber: string;
+  drawingName: string;
+  quantity: number;
+  quantityCompleted: number;
+  orderStatus: MiiOrderStatus;
+  completed: boolean;
+  completedDate: string;
+  inspected: boolean;
+  shipment: boolean;
+  shipmentDate: string;
+  remarks: string;
+  // Durations in whole minutes; null when not entered.
+  quotedMinutes: number | null;
+  actualMinutes: number | null;
+};
+
+export type MiiOrderDetailInput = Omit<MiiOrderDetail, "id">;
+
+export type QuotedHour = {
+  id: string;
+  jobId: string;
+  // Picked from mii_order_details for the selected job.
+  drawingNumber: string;
+  quantity: number;
+  machineId: string;
+  jobHours: number;
+  rate: number;
+  description: string;
+  timeRemaining: string;
+};
+
+export type QuotedHourInput = Omit<QuotedHour, "id">;
+
+// Backed by the mii_inspections table.
+export type Inspection = {
+  id: string;
+  // Both point at mii_order_details rows: one for its job, one for its drawing.
+  jobDetailId: string;
+  drawingDetailId: string;
+  // Storage paths inside the "inspection-documents" bucket.
+  documents: string[];
+  // ISO timestamp of when the inspection was submitted.
+  createdAt: string;
+};
+
+export type InspectionInput = Omit<Inspection, "id" | "createdAt">;
+
+// "Jobs New" page; backed by the mii_job_number table, laid out like the old system's.
+export type MiiJob = {
+  id: string;
+  jobNumber: string;
+  poNumber: string;
+  companyId: string;
+  date: string;
+  dueDate: string;
+  numberOfItems: number;
+  completedItems: number;
+  status: JobStatus;
+  shippedDate: string;
+  amount: number | null;
+  // A CURRENCIES code; null when not set.
+  currency: number | null;
+  poAmount: number | null;
+  essential: boolean;
+  inspection: boolean;
+  remarks: string;
+};
+
+export type MiiJobInput = Omit<MiiJob, "id">;
 
 export type Machine = { id: string; name: string };
 
@@ -87,6 +241,12 @@ type State = {
   items: InventoryItem[];
   brands: Brand[];
   companies: Company[];
+  jobs: Job[];
+  machiningHours: MachiningHour[];
+  miiOrderDetails: MiiOrderDetail[];
+  quotedHours: QuotedHour[];
+  inspections: Inspection[];
+  miiJobs: MiiJob[];
   machines: Machine[];
   orders: ToolOrder[];
   users: User[];
@@ -103,6 +263,12 @@ const empty: State = {
   items: [],
   brands: [],
   companies: [],
+  jobs: [],
+  machiningHours: [],
+  miiOrderDetails: [],
+  quotedHours: [],
+  inspections: [],
+  miiJobs: [],
   machines: [],
   orders: [],
   users: [],
@@ -137,7 +303,188 @@ function reportError(action: string, error: { message: string }) {
 
 const mapToolType = (r: Tables<"tool_types">): ToolType => ({ id: String(r.id), name: r.name });
 const mapBrand = (r: Tables<"brands">): Brand => ({ id: String(r.id), name: r.name });
-const mapCompany = (r: Tables<"companies">): Company => ({ id: String(r.id), name: r.name });
+const mapCompany = (r: Tables<"companies">): Company => ({
+  id: String(r.id),
+  name: r.name,
+  priority: (r.priority as CompanyPriority | null) ?? "Low",
+  address: r.address ?? "",
+  contactNumber: r.contact_number ?? "",
+});
+
+const toCompanyRow = (c: CompanyInput) => ({
+  name: c.name,
+  priority: c.priority,
+  address: c.address,
+  contact_number: c.contactNumber,
+});
+
+const mapJob = (r: Tables<"jobs">): Job => ({
+  id: String(r.id),
+  companyId: r.company_id != null ? String(r.company_id) : "",
+  jobNumber: r.job_number,
+  date: r.job_date ?? "",
+  dueDate: r.due_date ?? "",
+  numberOfItems: r.number_of_items,
+  completedItems: r.completed_items,
+  job: r.job,
+  status: JOB_STATUSES.includes(r.status as never) ? (r.status as JobStatus) : "Not Started",
+  poNumber: r.po_number,
+  shipDate: r.ship_date ?? "",
+  packingSlips: r.packing_slips ?? [],
+  priority: r.priority,
+});
+
+const toJobRow = (j: JobInput) => ({
+  company_id: j.companyId ? toDbId(j.companyId) : null,
+  job_number: j.jobNumber,
+  job_date: j.date || null,
+  due_date: j.dueDate || null,
+  number_of_items: j.numberOfItems,
+  completed_items: j.completedItems,
+  job: j.job,
+  status: j.status,
+  po_number: j.poNumber,
+  ship_date: j.shipDate || null,
+  packing_slips: j.packingSlips,
+  priority: j.priority,
+});
+
+const mapMachiningHour = (r: Tables<"machining_hours">): MachiningHour => ({
+  id: String(r.id),
+  date: r.work_date ?? "",
+  userId: r.user_id != null ? String(r.user_id) : "",
+  machineId: r.machine_id != null ? String(r.machine_id) : "",
+  description: r.description,
+  jobId: r.job_id != null ? String(r.job_id) : "",
+  drawingNumber: r.drawing_number,
+  durationMinutes: r.duration_minutes,
+  quantity: r.quantity,
+});
+
+const toMachiningHourRow = (m: MachiningHourInput) => ({
+  work_date: m.date || null,
+  user_id: m.userId ? toDbId(m.userId) : null,
+  machine_id: m.machineId ? toDbId(m.machineId) : null,
+  description: m.description,
+  job_id: m.jobId ? toDbId(m.jobId) : null,
+  drawing_number: m.drawingNumber,
+  duration_minutes: m.durationMinutes,
+  quantity: m.quantity,
+});
+
+const mapMiiOrderDetail = (r: Tables<"mii_order_details">): MiiOrderDetail => ({
+  id: String(r.id),
+  jobId: r.job_id != null ? String(r.job_id) : "",
+  drawingNumber: r.drawing_number,
+  drawingName: r.drawing_name,
+  quantity: r.quantity,
+  quantityCompleted: r.quantity_completed,
+  orderStatus: MII_ORDER_STATUSES.includes(r.order_status as never)
+    ? (r.order_status as MiiOrderStatus)
+    : "Not Started",
+  completed: r.completed,
+  completedDate: r.completed_date ?? "",
+  inspected: r.inspected,
+  shipment: r.shipment,
+  shipmentDate: r.shipment_date ?? "",
+  remarks: r.remarks,
+  quotedMinutes: r.quoted_minutes,
+  actualMinutes: r.actual_minutes,
+});
+
+const toMiiOrderDetailRow = (d: MiiOrderDetailInput) => ({
+  job_id: d.jobId ? toDbId(d.jobId) : null,
+  drawing_number: d.drawingNumber,
+  drawing_name: d.drawingName,
+  quantity: d.quantity,
+  quantity_completed: d.quantityCompleted,
+  order_status: d.orderStatus,
+  completed: d.completed,
+  completed_date: d.completedDate || null,
+  inspected: d.inspected,
+  shipment: d.shipment,
+  shipment_date: d.shipmentDate || null,
+  remarks: d.remarks,
+  quoted_minutes: d.quotedMinutes,
+  actual_minutes: d.actualMinutes,
+});
+
+const mapQuotedHour = (r: Tables<"quoted_hours">): QuotedHour => ({
+  id: String(r.id),
+  jobId: r.job_id != null ? String(r.job_id) : "",
+  drawingNumber: r.drawing_number,
+  quantity: r.quantity,
+  machineId: r.machine_id != null ? String(r.machine_id) : "",
+  jobHours: r.job_hours,
+  rate: r.rate,
+  description: r.description,
+  timeRemaining: r.time_remaining,
+});
+
+const toQuotedHourRow = (q: QuotedHourInput) => ({
+  job_id: q.jobId ? toDbId(q.jobId) : null,
+  drawing_number: q.drawingNumber,
+  quantity: q.quantity,
+  machine_id: q.machineId ? toDbId(q.machineId) : null,
+  job_hours: q.jobHours,
+  rate: q.rate,
+  description: q.description,
+  time_remaining: q.timeRemaining,
+});
+
+const mapInspection = (r: Tables<"mii_inspections">): Inspection => ({
+  id: String(r.id),
+  jobDetailId: r.job != null ? String(r.job) : "",
+  drawingDetailId: r.drawing != null ? String(r.drawing) : "",
+  documents: r.supporting_documents ?? [],
+  createdAt: r.created_at ?? "",
+});
+
+// created_at / updated_at / created_by / updated_by are filled in by a database trigger.
+const toInspectionRow = (i: InspectionInput) => ({
+  job: i.jobDetailId ? toDbId(i.jobDetailId) : null,
+  drawing: i.drawingDetailId ? toDbId(i.drawingDetailId) : null,
+  supporting_documents: i.documents,
+});
+
+const mapMiiJob = (r: Tables<"mii_job_number">): MiiJob => ({
+  id: String(r.id),
+  jobNumber: r.job_no,
+  poNumber: r.po_no,
+  companyId: r.company != null ? String(r.company) : "",
+  date: r.date ?? "",
+  dueDate: r.due_date ?? "",
+  numberOfItems: r.no_of_items ?? 0,
+  completedItems: r.completed_items ?? 0,
+  status: jobStatusFromCode(r.status),
+  shippedDate: r.shipped_date ?? "",
+  amount: r.amount,
+  currency: r.currency,
+  poAmount: r.po_amount,
+  essential: r.essential,
+  inspection: r.inspection,
+  remarks: r.remarks,
+});
+
+const toMiiJobRow = (j: MiiJobInput) => ({
+  job_no: j.jobNumber,
+  po_no: j.poNumber,
+  company: j.companyId ? toDbId(j.companyId) : null,
+  date: j.date || null,
+  due_date: j.dueDate || null,
+  no_of_items: j.numberOfItems,
+  completed_items: j.completedItems,
+  status: JOB_STATUS_CODE[j.status],
+  // Kept in step with the dates for anything else reading the table; the app never reads it.
+  days_left_behind: daysBetween(j.date, j.dueDate),
+  shipped_date: j.shippedDate || null,
+  amount: j.amount,
+  currency: j.currency,
+  po_amount: j.poAmount,
+  essential: j.essential,
+  inspection: j.inspection,
+  remarks: j.remarks,
+});
 const mapUser = (r: Tables<"app_users">): User => ({
   id: String(r.id),
   name: r.name,
@@ -228,65 +575,145 @@ const mapTimeliness = (r: Tables<"timeliness_configurations">): TimelinessConfig
   submittedByUserId: r.submitted_by != null ? String(r.submitted_by) : "",
 });
 
-async function loadAll() {
-  const [
-    toolTypes,
-    brands,
-    companies,
-    machines,
-    users,
-    items,
-    orders,
-    assignments,
-    machineHours,
-    timeliness,
-  ] = await Promise.all([
-    supabase.from("tool_types").select("*").order("name"),
-    supabase.from("brands").select("*").order("name"),
-    supabase.from("companies").select("*").order("id", { ascending: false }),
-    supabase.from("machines").select("*").order("name"),
-    supabase.from("app_users").select("*").order("name"),
-    supabase.from("inventory_items").select("*").order("name"),
-    supabase.from("inventory_orders").select("*").order("purchase_date", { ascending: false }),
-    supabase.from("inventory_assigned").select("*").order("issued_date", { ascending: false }),
-    supabase.from("machine_hours").select("*").order("work_date", { ascending: false }),
-    supabase.from("timeliness_configurations").select("*"),
-  ]);
+type QueryResult<Row> = { data: Row[] | null; error: { message: string } | null };
 
-  const firstError = [
-    toolTypes,
-    brands,
-    companies,
-    machines,
-    users,
-    items,
-    orders,
-    assignments,
-    machineHours,
-    timeliness,
-  ].find((r) => r.error)?.error;
-  if (firstError) {
-    console.error("[store] initial Supabase load failed:", firstError.message);
-    toast.error(`Could not load data from Supabase: ${firstError.message}`);
-    return;
+/**
+ * Loads one table into the store, retrying once after a pause: a request can fail
+ * while the login token is being refreshed (e.g. after the laptop slept) and works a
+ * moment later. Resolves to an error line when both tries fail, else null.
+ */
+async function loadTable<Row>(
+  label: string,
+  query: () => PromiseLike<QueryResult<Row>>,
+  apply: (rows: Row[]) => void,
+): Promise<string | null> {
+  let message = "";
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 1500));
+    const { data, error } = await query();
+    if (!error) {
+      apply(data ?? []);
+      emit();
+      return null;
+    }
+    message = error.message;
   }
-
-  state = {
-    ...state,
-    toolTypes: (toolTypes.data ?? []).map(mapToolType),
-    brands: (brands.data ?? []).map(mapBrand),
-    companies: (companies.data ?? []).map(mapCompany),
-    machines: (machines.data ?? []).map(mapMachine),
-    users: (users.data ?? []).map(mapUser),
-    items: (items.data ?? []).map(mapItem),
-    orders: (orders.data ?? []).map(mapOrder),
-    assignments: (assignments.data ?? []).map(mapAssignment),
-    machineHours: (machineHours.data ?? []).map(mapMachineHour),
-    timelinessConfigurations: (timeliness.data ?? []).map(mapTimeliness),
-  };
-  persist();
-  emit();
+  console.error(`[store] ${label} load failed:`, message);
+  return `${label}: ${message}`;
 }
+
+let loading: Promise<void> | null = null;
+let lastLoadedAt = 0;
+
+// Every table loads on its own, so one failing table no longer stops the others
+// from loading (it used to leave whole pages empty until a reload).
+async function loadEverything() {
+  const failures = await Promise.all([
+    loadTable(
+      "Tool types",
+      () => supabase.from("tool_types").select("*").order("name"),
+      (rows) => (state = { ...state, toolTypes: rows.map(mapToolType) }),
+    ),
+    loadTable(
+      "Brands",
+      () => supabase.from("brands").select("*").order("name"),
+      (rows) => (state = { ...state, brands: rows.map(mapBrand) }),
+    ),
+    loadTable(
+      "Companies",
+      () => supabase.from("companies").select("*").order("id", { ascending: false }),
+      (rows) => (state = { ...state, companies: rows.map(mapCompany) }),
+    ),
+    loadTable(
+      "Machines",
+      () => supabase.from("machines").select("*").order("name"),
+      (rows) => (state = { ...state, machines: rows.map(mapMachine) }),
+    ),
+    loadTable(
+      "Users",
+      () => supabase.from("app_users").select("*").order("name"),
+      (rows) => (state = { ...state, users: rows.map(mapUser) }),
+    ),
+    loadTable(
+      "Inventory items",
+      () => supabase.from("inventory_items").select("*").order("name"),
+      (rows) => (state = { ...state, items: rows.map(mapItem) }),
+    ),
+    loadTable(
+      "Orders",
+      () =>
+        supabase.from("inventory_orders").select("*").order("purchase_date", { ascending: false }),
+      (rows) => (state = { ...state, orders: rows.map(mapOrder) }),
+    ),
+    loadTable(
+      "Tool assignments",
+      () =>
+        supabase.from("inventory_assigned").select("*").order("issued_date", { ascending: false }),
+      (rows) => (state = { ...state, assignments: rows.map(mapAssignment) }),
+    ),
+    loadTable(
+      "Machine hours",
+      () => supabase.from("machine_hours").select("*").order("work_date", { ascending: false }),
+      (rows) => (state = { ...state, machineHours: rows.map(mapMachineHour) }),
+    ),
+    loadTable(
+      "Timeliness configurations",
+      () => supabase.from("timeliness_configurations").select("*"),
+      (rows) => (state = { ...state, timelinessConfigurations: rows.map(mapTimeliness) }),
+    ),
+    loadTable(
+      "Jobs",
+      () => supabase.from("jobs").select("*").order("id", { ascending: false }),
+      (rows) => (state = { ...state, jobs: rows.map(mapJob) }),
+    ),
+    loadTable(
+      "Machining hours",
+      () => supabase.from("machining_hours").select("*").order("work_date", { ascending: false }),
+      (rows) => (state = { ...state, machiningHours: rows.map(mapMachiningHour) }),
+    ),
+    loadTable(
+      "MII order details",
+      () => supabase.from("mii_order_details").select("*").order("id", { ascending: false }),
+      (rows) => (state = { ...state, miiOrderDetails: rows.map(mapMiiOrderDetail) }),
+    ),
+    loadTable(
+      "Quoted hours",
+      () => supabase.from("quoted_hours").select("*").order("id", { ascending: false }),
+      (rows) => (state = { ...state, quotedHours: rows.map(mapQuotedHour) }),
+    ),
+    loadTable(
+      "Inspections",
+      () => supabase.from("mii_inspections").select("*").order("created_at", { ascending: false }),
+      (rows) => (state = { ...state, inspections: rows.map(mapInspection) }),
+    ),
+    loadTable(
+      "Jobs New",
+      () => supabase.from("mii_job_number").select("*").order("id", { ascending: false }),
+      (rows) => (state = { ...state, miiJobs: rows.map(mapMiiJob) }),
+    ),
+  ]);
+  lastLoadedAt = Date.now();
+  persist();
+
+  const failed = failures.filter((line): line is string => line !== null);
+  if (failed.length > 0) {
+    toast.error(`Could not load ${failed.length === 1 ? "a table" : `${failed.length} tables`}`, {
+      description: failed.join("\n"),
+      action: { label: "Retry", onClick: () => void loadAll() },
+    });
+  }
+}
+
+/** (Re)loads every table from Supabase; calls made while a load is running share it. */
+function loadAll(): Promise<void> {
+  loading ??= loadEverything().finally(() => {
+    loading = null;
+  });
+  return loading;
+}
+
+// Data older than this is refreshed when the user comes back to the tab.
+const STALE_AFTER_MS = 5 * 60_000;
 
 function hydrate() {
   if (hydrated || typeof window === "undefined") return;
@@ -304,6 +731,33 @@ function hydrate() {
     /* ignore */
   }
   void loadAll();
+
+  // Signing in again without a page reload (or as someone else) reloads the data;
+  // signing out drops it, so the next person on this browser never sees the last one's.
+  let userId: string | null | undefined;
+  supabase.auth.onAuthStateChange((event, session) => {
+    const nextUserId = session?.user.id ?? null;
+    if (event === "SIGNED_OUT") {
+      state = empty;
+      try {
+        localStorage.removeItem(KEY);
+      } catch {
+        /* ignore */
+      }
+      emit();
+    } else if (event === "SIGNED_IN" && userId !== undefined && nextUserId !== userId) {
+      // Supabase asks not to call it from inside this callback, so load on the next tick.
+      setTimeout(() => void loadAll(), 0);
+    }
+    userId = nextUserId;
+  });
+
+  // Coming back to a tab that sat idle refreshes data that may have changed elsewhere.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && Date.now() - lastLoadedAt > STALE_AFTER_MS) {
+      void loadAll();
+    }
+  });
 }
 
 function subscribe(listener: () => void) {
@@ -528,13 +982,17 @@ export function removeMachine(id: string) {
     .then(({ error }) => error && reportError("Remove machine", error));
 }
 
-export function addCompany(name: string) {
+export function addCompany(company: CompanyInput) {
   const tempId = uid();
-  state = { ...state, companies: [{ id: tempId, name }, ...state.companies] };
+  state = { ...state, companies: [{ id: tempId, ...company }, ...state.companies] };
   persist();
   emit();
   void (async () => {
-    const { data, error } = await supabase.from("companies").insert({ name }).select("id").single();
+    const { data, error } = await supabase
+      .from("companies")
+      .insert(toCompanyRow(company))
+      .select("id")
+      .single();
     if (error) return reportError("Add company", error);
     state = {
       ...state,
@@ -545,11 +1003,11 @@ export function addCompany(name: string) {
   })();
 }
 
-export function updateCompany(id: string, name: string) {
+export function updateCompany(id: string, company: CompanyInput) {
   state = {
     ...state,
-    companies: state.companies.map((company) =>
-      company.id === id ? { ...company, name } : company,
+    companies: state.companies.map((existing) =>
+      existing.id === id ? { ...existing, ...company } : existing,
     ),
   };
   persist();
@@ -557,7 +1015,7 @@ export function updateCompany(id: string, name: string) {
   if (!isSavedId(id)) return;
   void supabase
     .from("companies")
-    .update({ name })
+    .update(toCompanyRow(company))
     .eq("id", toDbId(id))
     .then(({ error }) => error && reportError("Update company", error));
 }
@@ -572,6 +1030,372 @@ export function removeCompany(id: string) {
     .delete()
     .eq("id", toDbId(id))
     .then(({ error }) => error && reportError("Remove company", error));
+}
+
+// ---------- File storage (private buckets, opened via short-lived signed URLs) ----------
+
+const PACKING_SLIPS_BUCKET = "packing-slips";
+const INSPECTION_DOCS_BUCKET = "inspection-documents";
+
+async function uploadToBucket(bucket: string, file: File): Promise<string | null> {
+  // A folder per upload keeps the original file name without collisions.
+  const path = `${crypto.randomUUID()}/${file.name}`;
+  const { error } = await supabase.storage.from(bucket).upload(path, file);
+  if (error) {
+    reportError(`Upload ${file.name}`, error);
+    return null;
+  }
+  return path;
+}
+
+function removeFromBucket(bucket: string, paths: string[], label: string) {
+  if (paths.length === 0) return;
+  void supabase.storage
+    .from(bucket)
+    .remove(paths)
+    .then(({ error }) => error && reportError(`Remove ${label}`, error));
+}
+
+async function signedUrl(bucket: string, path: string, label: string): Promise<string | null> {
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, 60 * 10);
+  if (error) {
+    reportError(`Open ${label}`, error);
+    return null;
+  }
+  return data.signedUrl;
+}
+
+export const uploadPackingSlip = (file: File) => uploadToBucket(PACKING_SLIPS_BUCKET, file);
+export const removePackingSlips = (paths: string[]) =>
+  removeFromBucket(PACKING_SLIPS_BUCKET, paths, "packing slip");
+export const getPackingSlipUrl = (path: string) =>
+  signedUrl(PACKING_SLIPS_BUCKET, path, "packing slip");
+
+export const uploadInspectionDocument = (file: File) => uploadToBucket(INSPECTION_DOCS_BUCKET, file);
+export const removeInspectionDocuments = (paths: string[]) =>
+  removeFromBucket(INSPECTION_DOCS_BUCKET, paths, "inspection document");
+export const getInspectionDocumentUrl = (path: string) =>
+  signedUrl(INSPECTION_DOCS_BUCKET, path, "inspection document");
+
+/** Resolves to the saved job's id, or null when the insert failed. */
+export function addJob(job: JobInput): Promise<string | null> {
+  const tempId = uid();
+  state = { ...state, jobs: [{ id: tempId, ...job }, ...state.jobs] };
+  persist();
+  emit();
+  return (async () => {
+    const { data, error } = await supabase.from("jobs").insert(toJobRow(job)).select("id").single();
+    if (error) {
+      reportError("Add job", error);
+      return null;
+    }
+    state = {
+      ...state,
+      jobs: state.jobs.map((j) => (j.id === tempId ? { ...j, id: String(data.id) } : j)),
+    };
+    persist();
+    emit();
+    return String(data.id);
+  })();
+}
+
+export function updateJob(id: string, job: JobInput) {
+  state = {
+    ...state,
+    jobs: state.jobs.map((existing) => (existing.id === id ? { ...existing, ...job } : existing)),
+  };
+  persist();
+  emit();
+  if (!isSavedId(id)) return;
+  void supabase
+    .from("jobs")
+    .update(toJobRow(job))
+    .eq("id", toDbId(id))
+    .then(({ error }) => error && reportError("Update job", error));
+}
+
+export function removeJob(id: string) {
+  const job = state.jobs.find((j) => j.id === id);
+  state = { ...state, jobs: state.jobs.filter((j) => j.id !== id) };
+  persist();
+  emit();
+  if (job) removePackingSlips(job.packingSlips);
+  if (!isSavedId(id)) return;
+  void supabase
+    .from("jobs")
+    .delete()
+    .eq("id", toDbId(id))
+    .then(({ error }) => error && reportError("Remove job", error));
+}
+
+export function addMachiningHour(entry: MachiningHourInput) {
+  const tempId = uid();
+  state = { ...state, machiningHours: [{ id: tempId, ...entry }, ...state.machiningHours] };
+  persist();
+  emit();
+  void (async () => {
+    const { data, error } = await supabase
+      .from("machining_hours")
+      .insert(toMachiningHourRow(entry))
+      .select("id")
+      .single();
+    if (error) return reportError("Add machining hours", error);
+    state = {
+      ...state,
+      machiningHours: state.machiningHours.map((m) =>
+        m.id === tempId ? { ...m, id: String(data.id) } : m,
+      ),
+    };
+    persist();
+    emit();
+  })();
+}
+
+export function updateMachiningHour(id: string, entry: MachiningHourInput) {
+  state = {
+    ...state,
+    machiningHours: state.machiningHours.map((existing) =>
+      existing.id === id ? { ...existing, ...entry } : existing,
+    ),
+  };
+  persist();
+  emit();
+  if (!isSavedId(id)) return;
+  void supabase
+    .from("machining_hours")
+    .update(toMachiningHourRow(entry))
+    .eq("id", toDbId(id))
+    .then(({ error }) => error && reportError("Update machining hours", error));
+}
+
+export function removeMachiningHour(id: string) {
+  state = { ...state, machiningHours: state.machiningHours.filter((m) => m.id !== id) };
+  persist();
+  emit();
+  if (!isSavedId(id)) return;
+  void supabase
+    .from("machining_hours")
+    .delete()
+    .eq("id", toDbId(id))
+    .then(({ error }) => error && reportError("Remove machining hours", error));
+}
+
+/** Resolves to the saved row's id, or null when the insert failed. */
+export function addMiiOrderDetail(detail: MiiOrderDetailInput): Promise<string | null> {
+  const tempId = uid();
+  state = { ...state, miiOrderDetails: [{ id: tempId, ...detail }, ...state.miiOrderDetails] };
+  persist();
+  emit();
+  return (async () => {
+    const { data, error } = await supabase
+      .from("mii_order_details")
+      .insert(toMiiOrderDetailRow(detail))
+      .select("id")
+      .single();
+    if (error) {
+      reportError("Add MII order detail", error);
+      return null;
+    }
+    state = {
+      ...state,
+      miiOrderDetails: state.miiOrderDetails.map((d) =>
+        d.id === tempId ? { ...d, id: String(data.id) } : d,
+      ),
+    };
+    persist();
+    emit();
+    return String(data.id);
+  })();
+}
+
+export function updateMiiOrderDetail(id: string, detail: MiiOrderDetailInput) {
+  state = {
+    ...state,
+    miiOrderDetails: state.miiOrderDetails.map((existing) =>
+      existing.id === id ? { ...existing, ...detail } : existing,
+    ),
+  };
+  persist();
+  emit();
+  if (!isSavedId(id)) return;
+  void supabase
+    .from("mii_order_details")
+    .update(toMiiOrderDetailRow(detail))
+    .eq("id", toDbId(id))
+    .then(({ error }) => error && reportError("Update MII order detail", error));
+}
+
+export function removeMiiOrderDetail(id: string) {
+  state = { ...state, miiOrderDetails: state.miiOrderDetails.filter((d) => d.id !== id) };
+  persist();
+  emit();
+  if (!isSavedId(id)) return;
+  void supabase
+    .from("mii_order_details")
+    .delete()
+    .eq("id", toDbId(id))
+    .then(({ error }) => error && reportError("Remove MII order detail", error));
+}
+
+export function addQuotedHour(quote: QuotedHourInput) {
+  const tempId = uid();
+  state = { ...state, quotedHours: [{ id: tempId, ...quote }, ...state.quotedHours] };
+  persist();
+  emit();
+  void (async () => {
+    const { data, error } = await supabase
+      .from("quoted_hours")
+      .insert(toQuotedHourRow(quote))
+      .select("id")
+      .single();
+    if (error) return reportError("Add quoted hours", error);
+    state = {
+      ...state,
+      quotedHours: state.quotedHours.map((q) => (q.id === tempId ? { ...q, id: String(data.id) } : q)),
+    };
+    persist();
+    emit();
+  })();
+}
+
+export function updateQuotedHour(id: string, quote: QuotedHourInput) {
+  state = {
+    ...state,
+    quotedHours: state.quotedHours.map((existing) =>
+      existing.id === id ? { ...existing, ...quote } : existing,
+    ),
+  };
+  persist();
+  emit();
+  if (!isSavedId(id)) return;
+  void supabase
+    .from("quoted_hours")
+    .update(toQuotedHourRow(quote))
+    .eq("id", toDbId(id))
+    .then(({ error }) => error && reportError("Update quoted hours", error));
+}
+
+export function removeQuotedHour(id: string) {
+  state = { ...state, quotedHours: state.quotedHours.filter((q) => q.id !== id) };
+  persist();
+  emit();
+  if (!isSavedId(id)) return;
+  void supabase
+    .from("quoted_hours")
+    .delete()
+    .eq("id", toDbId(id))
+    .then(({ error }) => error && reportError("Remove quoted hours", error));
+}
+
+/** Resolves to the saved row's id, or null when the insert failed. */
+export function addInspection(inspection: InspectionInput): Promise<string | null> {
+  const tempId = uid();
+  state = {
+    ...state,
+    inspections: [
+      { id: tempId, createdAt: new Date().toISOString(), ...inspection },
+      ...state.inspections,
+    ],
+  };
+  persist();
+  emit();
+  return (async () => {
+    const { data, error } = await supabase
+      .from("mii_inspections")
+      .insert(toInspectionRow(inspection))
+      .select("id")
+      .single();
+    if (error) {
+      reportError("Add inspection", error);
+      return null;
+    }
+    state = {
+      ...state,
+      inspections: state.inspections.map((i) => (i.id === tempId ? { ...i, id: String(data.id) } : i)),
+    };
+    persist();
+    emit();
+    return String(data.id);
+  })();
+}
+
+export function updateInspection(id: string, inspection: InspectionInput) {
+  state = {
+    ...state,
+    inspections: state.inspections.map((existing) =>
+      existing.id === id ? { ...existing, ...inspection } : existing,
+    ),
+  };
+  persist();
+  emit();
+  if (!isSavedId(id)) return;
+  void supabase
+    .from("mii_inspections")
+    .update(toInspectionRow(inspection))
+    .eq("id", toDbId(id))
+    .then(({ error }) => error && reportError("Update inspection", error));
+}
+
+export function removeInspection(id: string) {
+  const inspection = state.inspections.find((i) => i.id === id);
+  state = { ...state, inspections: state.inspections.filter((i) => i.id !== id) };
+  persist();
+  emit();
+  if (inspection) removeInspectionDocuments(inspection.documents);
+  if (!isSavedId(id)) return;
+  void supabase
+    .from("mii_inspections")
+    .delete()
+    .eq("id", toDbId(id))
+    .then(({ error }) => error && reportError("Remove inspection", error));
+}
+
+export function addMiiJob(job: MiiJobInput) {
+  const tempId = uid();
+  state = { ...state, miiJobs: [{ id: tempId, ...job }, ...state.miiJobs] };
+  persist();
+  emit();
+  void (async () => {
+    const { data, error } = await supabase
+      .from("mii_job_number")
+      .insert(toMiiJobRow(job))
+      .select("id")
+      .single();
+    if (error) return reportError("Add job", error);
+    state = {
+      ...state,
+      miiJobs: state.miiJobs.map((j) => (j.id === tempId ? { ...j, id: String(data.id) } : j)),
+    };
+    persist();
+    emit();
+  })();
+}
+
+export function updateMiiJob(id: string, job: MiiJobInput) {
+  state = {
+    ...state,
+    miiJobs: state.miiJobs.map((existing) => (existing.id === id ? { ...existing, ...job } : existing)),
+  };
+  persist();
+  emit();
+  if (!isSavedId(id)) return;
+  void supabase
+    .from("mii_job_number")
+    .update(toMiiJobRow(job))
+    .eq("id", toDbId(id))
+    .then(({ error }) => error && reportError("Update job", error));
+}
+
+export function removeMiiJob(id: string) {
+  state = { ...state, miiJobs: state.miiJobs.filter((j) => j.id !== id) };
+  persist();
+  emit();
+  if (!isSavedId(id)) return;
+  void supabase
+    .from("mii_job_number")
+    .delete()
+    .eq("id", toDbId(id))
+    .then(({ error }) => error && reportError("Remove job", error));
 }
 
 export function addMachineHour(entry: Omit<MachineHour, "id">) {

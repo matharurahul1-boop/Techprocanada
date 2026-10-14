@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { Shell, fieldClass, labelClass } from "@/components/Shell";
+import { useConfirmDelete } from "@/components/confirm-delete";
 import { AddButton, Sheet } from "@/components/Sheet";
 import { Pagination } from "@/components/Pagination";
 
@@ -31,6 +32,7 @@ export const Route = createFileRoute("/machines")({
 
 function MachinesPage() {
   const { machines, machineHours, assignments } = useStore();
+  const { confirmDelete, confirmDialog } = useConfirmDelete();
   const [name, setName] = useState("");
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -132,7 +134,8 @@ function MachinesPage() {
                       <Pencil size={14} />
                     </button>
                     <button
-                      onClick={() => removeMachine(machine.id)}
+                      onClick={() =>
+                        confirmDelete({ title: `Delete machine ${machine.name}?`, description: "This cannot be undone.", onConfirm: () => removeMachine(machine.id) })}
                       aria-label={`Remove ${machine.name}`}
                       title="Remove"
                       className="grid size-8 shrink-0 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn"
@@ -155,6 +158,7 @@ function MachinesPage() {
           />
         </section>
       </div>
+      {confirmDialog}
     </Shell>
   );
 }

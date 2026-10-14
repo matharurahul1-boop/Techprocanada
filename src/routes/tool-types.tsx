@@ -3,6 +3,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { Shell, fieldClass, labelClass } from "@/components/Shell";
+import { useConfirmDelete } from "@/components/confirm-delete";
 import { AddButton, Sheet } from "@/components/Sheet";
 import { Pagination } from "@/components/Pagination";
 import { addToolType, removeToolType, updateToolType, useStore } from "@/lib/store";
@@ -25,6 +26,7 @@ export const Route = createFileRoute("/tool-types")({
 
 function ToolTypesPage() {
   const { toolTypes, items } = useStore();
+  const { confirmDelete, confirmDialog } = useConfirmDelete();
   const [name, setName] = useState("");
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -91,7 +93,7 @@ function ToolTypesPage() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <button onClick={() => openEdit(type.id, type.name)} aria-label={`Edit ${type.name}`} title="Edit" className="grid size-8 shrink-0 place-items-center rounded-full bg-chip text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"><Pencil size={14} /></button>
-                    <button onClick={() => removeToolType(type.id)} aria-label={`Remove ${type.name}`} title="Remove" className="grid size-8 shrink-0 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn"><Trash2 size={14} /></button>
+                    <button onClick={() => confirmDelete({ title: `Delete tool type ${type.name}?`, description: "This cannot be undone.", onConfirm: () => removeToolType(type.id) })} aria-label={`Remove ${type.name}`} title="Remove" className="grid size-8 shrink-0 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn"><Trash2 size={14} /></button>
                   </div>
                 </div>
               );
@@ -108,6 +110,7 @@ function ToolTypesPage() {
           />
         </section>
       </div>
+      {confirmDialog}
     </Shell>
   );
 }

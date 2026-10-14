@@ -27,9 +27,30 @@ export type Database = {
         Relationships: []
       }
       companies: {
-        Row: { id: number; name: string; created_at: string | null }
-        Insert: { id?: number; name: string; created_at?: string | null }
-        Update: { id?: number; name?: string; created_at?: string | null }
+        Row: {
+          id: number
+          name: string
+          priority: string | null
+          address: string | null
+          contact_number: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: number
+          name: string
+          priority?: string | null
+          address?: string | null
+          contact_number?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: number
+          name?: string
+          priority?: string | null
+          address?: string | null
+          contact_number?: string | null
+          created_at?: string | null
+        }
         Relationships: []
       }
       machines: {
@@ -329,6 +350,309 @@ export type Database = {
           job_number?: string | null
           notes?: string | null
           created_at?: string | null
+        }
+        Relationships: []
+      }
+      jobs: {
+        Row: {
+          id: number
+          company_id: number | null
+          job_number: string
+          job_date: string | null
+          due_date: string | null
+          number_of_items: number
+          completed_items: number
+          job: string
+          status: string
+          po_number: string
+          ship_date: string | null
+          packing_slips: string[]
+          priority: boolean
+          created_at: string | null
+        }
+        Insert: {
+          id?: number
+          company_id?: number | null
+          job_number?: string
+          job_date?: string | null
+          due_date?: string | null
+          number_of_items?: number
+          completed_items?: number
+          job?: string
+          status?: string
+          po_number?: string
+          ship_date?: string | null
+          packing_slips?: string[]
+          priority?: boolean
+          created_at?: string | null
+        }
+        Update: {
+          id?: number
+          company_id?: number | null
+          job_number?: string
+          job_date?: string | null
+          due_date?: string | null
+          number_of_items?: number
+          completed_items?: number
+          job?: string
+          status?: string
+          po_number?: string
+          ship_date?: string | null
+          packing_slips?: string[]
+          priority?: boolean
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      machining_hours: {
+        Row: {
+          id: number
+          work_date: string | null
+          user_id: number | null
+          machine_id: number | null
+          description: string
+          job_id: number | null
+          drawing_number: string
+          duration_minutes: number | null
+          quantity: number | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: number
+          work_date?: string | null
+          user_id?: number | null
+          machine_id?: number | null
+          description?: string
+          job_id?: number | null
+          drawing_number?: string
+          duration_minutes?: number | null
+          quantity?: number | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: number
+          work_date?: string | null
+          user_id?: number | null
+          machine_id?: number | null
+          description?: string
+          job_id?: number | null
+          drawing_number?: string
+          duration_minutes?: number | null
+          quantity?: number | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      mii_order_details: {
+        Row: {
+          id: number
+          job_id: number | null
+          drawing_number: string
+          drawing_name: string
+          quantity: number
+          quantity_completed: number
+          order_status: string
+          completed: boolean
+          completed_date: string | null
+          inspected: boolean
+          shipment: boolean
+          shipment_date: string | null
+          remarks: string
+          quoted_minutes: number | null
+          actual_minutes: number | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: number
+          job_id?: number | null
+          drawing_number?: string
+          drawing_name?: string
+          quantity?: number
+          quantity_completed?: number
+          order_status?: string
+          completed?: boolean
+          completed_date?: string | null
+          inspected?: boolean
+          shipment?: boolean
+          shipment_date?: string | null
+          remarks?: string
+          quoted_minutes?: number | null
+          actual_minutes?: number | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: number
+          job_id?: number | null
+          drawing_number?: string
+          drawing_name?: string
+          quantity?: number
+          quantity_completed?: number
+          order_status?: string
+          completed?: boolean
+          completed_date?: string | null
+          inspected?: boolean
+          shipment?: boolean
+          shipment_date?: string | null
+          remarks?: string
+          quoted_minutes?: number | null
+          actual_minutes?: number | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      quoted_hours: {
+        Row: {
+          id: number
+          job_id: number | null
+          drawing_number: string
+          quantity: number
+          machine_id: number | null
+          job_hours: number
+          rate: number
+          description: string
+          time_remaining: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: number
+          job_id?: number | null
+          drawing_number?: string
+          quantity?: number
+          machine_id?: number | null
+          job_hours?: number
+          rate?: number
+          description?: string
+          time_remaining?: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: number
+          job_id?: number | null
+          drawing_number?: string
+          quantity?: number
+          machine_id?: number | null
+          job_hours?: number
+          rate?: number
+          description?: string
+          time_remaining?: string
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      mii_inspections: {
+        Row: {
+          id: number
+          created_at: string | null
+          updated_at: string | null
+          created_by: number | null
+          updated_by: number | null
+          supporting_documents: string[]
+          job: number | null
+          drawing: number | null
+        }
+        Insert: {
+          id?: number
+          created_at?: string | null
+          updated_at?: string | null
+          created_by?: number | null
+          updated_by?: number | null
+          supporting_documents?: string[]
+          job?: number | null
+          drawing?: number | null
+        }
+        Update: {
+          id?: number
+          created_at?: string | null
+          updated_at?: string | null
+          created_by?: number | null
+          updated_by?: number | null
+          supporting_documents?: string[]
+          job?: number | null
+          drawing?: number | null
+        }
+        Relationships: []
+      }
+      mii_job_number: {
+        Row: {
+          id: number
+          created_at: string | null
+          updated_at: string | null
+          created_by: number | null
+          updated_by: number | null
+          job_no: string
+          po: number | null
+          due_date: string | null
+          no_of_items: number | null
+          completed_items: number | null
+          status: number | null
+          days_left_behind: number | null
+          inspection_report: string | null
+          inspection: boolean
+          shipped_date: string | null
+          packing_slip: string | null
+          po_no: string
+          company: number | null
+          amount: number | null
+          currency: number | null
+          po_amount: number | null
+          date: string | null
+          essential: boolean
+          remarks: string
+          packing_slips: Json | null
+        }
+        Insert: {
+          id?: number
+          created_at?: string | null
+          updated_at?: string | null
+          created_by?: number | null
+          updated_by?: number | null
+          job_no?: string
+          po?: number | null
+          due_date?: string | null
+          no_of_items?: number | null
+          completed_items?: number | null
+          status?: number | null
+          days_left_behind?: number | null
+          inspection_report?: string | null
+          inspection?: boolean
+          shipped_date?: string | null
+          packing_slip?: string | null
+          po_no?: string
+          company?: number | null
+          amount?: number | null
+          currency?: number | null
+          po_amount?: number | null
+          date?: string | null
+          essential?: boolean
+          remarks?: string
+          packing_slips?: Json | null
+        }
+        Update: {
+          id?: number
+          created_at?: string | null
+          updated_at?: string | null
+          created_by?: number | null
+          updated_by?: number | null
+          job_no?: string
+          po?: number | null
+          due_date?: string | null
+          no_of_items?: number | null
+          completed_items?: number | null
+          status?: number | null
+          days_left_behind?: number | null
+          inspection_report?: string | null
+          inspection?: boolean
+          shipped_date?: string | null
+          packing_slip?: string | null
+          po_no?: string
+          company?: number | null
+          amount?: number | null
+          currency?: number | null
+          po_amount?: number | null
+          date?: string | null
+          essential?: boolean
+          remarks?: string
+          packing_slips?: Json | null
         }
         Relationships: []
       }

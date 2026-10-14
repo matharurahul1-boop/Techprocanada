@@ -3,6 +3,7 @@ import { ClipboardCheck, Printer, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Shell, fieldClass } from "@/components/Shell";
+import { DataList } from "@/components/DataList";
 import techProLogo from "@/assets/techpro-logo.png";
 import { balanceOf, useStore } from "@/lib/store";
 
@@ -64,8 +65,9 @@ function printSheet(kind: "report" | "order", rows: PrintRow[], logoUrl: string)
     return;
   }
   const now = new Date();
-  const today = now.toLocaleDateString("en-CA");
-  const stamp = `${today.replace(/-/g, "")}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+  const isoToday = now.toLocaleDateString("en-CA");
+  const today = now.toLocaleDateString("en-GB");
+  const stamp = `${isoToday.replace(/-/g, "")}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
   const isOrder = kind === "order";
   const title = isOrder ? "Tools Order Form" : "Essential Tools Report";
   const totalQty = rows.reduce((sum, r) => sum + r.toOrder, 0);
@@ -213,6 +215,29 @@ function EssentialReportPage() {
         ? "bg-warn-soft text-warn ring-warn/25"
         : "bg-good-soft text-good ring-good/25";
 
+  type ReportRow = (typeof rows)[number];
+
+  const selectBox = (row: ReportRow) => (
+    <input
+      type="checkbox"
+      aria-label={`Select ${row.name}`}
+      checked={selected.has(row.id)}
+      onChange={() => toggle(row.id)}
+      className="size-4 shrink-0 accent-[var(--accent-brand)]"
+    />
+  );
+
+  const orderQtyInput = (row: ReportRow) => (
+    <input
+      type="number"
+      min="0"
+      aria-label={`Order quantity for ${row.name}`}
+      value={orderQty[row.id] ?? String(row.suggested)}
+      onChange={(e) => setOrderQty((current) => ({ ...current, [row.id]: e.target.value }))}
+      className="h-9 w-20 rounded-lg bg-panel px-2 text-right font-mono text-sm ring-1 ring-line focus:ring-2 focus:ring-accent-brand focus:outline-none"
+    />
+  );
+
   return (
     <Shell eyebrow="Essentials" title="Essential Tools Report">
       <div className="animate-rise px-5 py-6 lg:px-8 lg:py-8">
@@ -279,24 +304,10 @@ function EssentialReportPage() {
             </div>
           </div>
 
-          <div className="glass-surface overflow-hidden rounded-2xl border shadow-xl shadow-accent-brand/5">
-            <div className="hidden grid-cols-[2.5rem_minmax(12rem,1.4fr)_minmax(8rem,0.8fr)_5rem_5rem_6rem_6rem] items-center gap-3 border-b border-line px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-fg lg:grid">
-              <input
-                type="checkbox"
-                aria-label="Select all"
-                checked={allVisibleSelected}
-                onChange={toggleAll}
-                className="size-4 accent-[var(--accent-brand)]"
-              />
-              <span>Tool</span>
-              <span>Type</span>
-              <span className="text-right">Threshold</span>
-              <span className="text-right">Balance</span>
-              <span className="text-center">Status</span>
-              <span className="text-right">Order qty</span>
-            </div>
-
-            {visible.length === 0 ? (
+          <DataList
+            rows={visible}
+            rowKey={(row) => row.id}
+            empty={
               <div className="px-5 py-14 text-center">
                 <p className="text-sm font-semibold">
                   {rows.length === 0 ? "No essential tools yet" : query ? "No matching tools" : "All essential tools are stocked"}
@@ -309,59 +320,90 @@ function EssentialReportPage() {
                       : "Nothing is missing or below its threshold right now."}
                 </p>
               </div>
-            ) : (
-              <div className="divide-y divide-line">
-                {visible.map((row) => (
-                  <div
-                    key={row.id}
-                    className="flex items-start gap-3 px-4 py-3.5 lg:grid lg:grid-cols-[2.5rem_minmax(12rem,1.4fr)_minmax(8rem,0.8fr)_5rem_5rem_6rem_6rem] lg:items-center"
+            }
+            columns={[
+              {
+                header: (
+                  <input
+                    type="checkbox"
+                    aria-label="Select all"
+                    checked={allVisibleSelected}
+                    onChange={toggleAll}
+                    className="size-4 accent-[var(--accent-brand)]"
+                  />
+                ),
+                width: "2.5rem",
+                cell: selectBox,
+              },
+              {
+                header: "Tool",
+                sortValue: (row) => row.name,
+                width: "minmax(12rem,1.4fr)",
+                cell: (row) => <p className="truncate text-sm font-semibold">{row.name}</p>,
+              },
+              {
+                header: "Type",
+                sortValue: (row) => row.type,
+                width: "minmax(8rem,0.8fr)",
+                cell: (row) => <span className="block truncate text-[12px] text-muted-fg">{row.type}</span>,
+              },
+              {
+                header: "Threshold",
+                sortValue: (row) => row.threshold,
+                width: "5rem",
+                align: "right",
+                cell: (row) => <span className="font-mono text-[13px] text-muted-fg">{row.threshold}</span>,
+              },
+              {
+                header: "Balance",
+                sortValue: (row) => row.balance,
+                width: "5rem",
+                align: "right",
+                cell: (row) => <span className="font-mono text-[13px] font-semibold">{row.balance}</span>,
+              },
+              {
+                header: "Status",
+                sortValue: (row) => ["Missing", "Low", "OK"].indexOf(row.status),
+                width: "6rem",
+                align: "center",
+                cell: (row) => (
+                  <span
+                    className={`inline-block rounded-full px-2.5 py-0.5 font-mono text-[11px] font-semibold ring-1 ${statusTone(row.status)}`}
                   >
-                    <input
-                      type="checkbox"
-                      aria-label={`Select ${row.name}`}
-                      checked={selected.has(row.id)}
-                      onChange={() => toggle(row.id)}
-                      className="mt-1 size-4 shrink-0 accent-[var(--accent-brand)] lg:mt-0"
-                    />
-                    <div className="min-w-0 flex-1 lg:contents">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold">{row.name}</p>
-                        <p className="truncate text-[12px] text-muted-fg lg:hidden">{row.type}</p>
-                      </div>
-                      <span className="hidden truncate text-[12px] text-muted-fg lg:block">{row.type}</span>
-                      <span className="hidden text-right font-mono text-[13px] text-muted-fg lg:block">{row.threshold}</span>
-                      <span className="hidden text-right font-mono text-[13px] font-semibold lg:block">{row.balance}</span>
-                      <span
-                        className={`hidden justify-self-center rounded-full px-2.5 py-0.5 font-mono text-[11px] font-semibold ring-1 lg:inline-block ${statusTone(row.status)}`}
-                      >
-                        {row.status}
-                      </span>
-                      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 lg:hidden">
-                        <span className="font-mono text-[11px] text-muted-fg">Thr {row.threshold}</span>
-                        <span className="font-mono text-[11px] text-muted-fg">Bal {row.balance}</span>
-                        <span
-                          className={`rounded-full px-2 py-0.5 font-mono text-[11px] font-semibold ring-1 ${statusTone(row.status)}`}
-                        >
-                          {row.status}
-                        </span>
-                      </div>
-                      <label className="mt-2 flex items-center gap-2 lg:mt-0 lg:justify-self-end">
-                        <span className="text-[11px] text-muted-fg lg:hidden">Order qty</span>
-                        <input
-                          type="number"
-                          min="0"
-                          aria-label={`Order quantity for ${row.name}`}
-                          value={orderQty[row.id] ?? String(row.suggested)}
-                          onChange={(e) => setOrderQty((current) => ({ ...current, [row.id]: e.target.value }))}
-                          className="h-9 w-20 rounded-lg bg-panel px-2 text-right font-mono text-sm ring-1 ring-line focus:ring-2 focus:ring-accent-brand focus:outline-none"
-                        />
-                      </label>
-                    </div>
+                    {row.status}
+                  </span>
+                ),
+              },
+              {
+                header: "Order qty",
+                width: "6rem",
+                align: "right",
+                cell: (row) => <div className="flex justify-end">{orderQtyInput(row)}</div>,
+              },
+            ]}
+            card={(row) => (
+              <div className="flex items-start gap-3">
+                <div className="mt-1">{selectBox(row)}</div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{row.name}</p>
+                  <p className="truncate text-[12px] text-muted-fg">{row.type}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                    <span className="font-mono text-[11px] text-muted-fg">Thr {row.threshold}</span>
+                    <span className="font-mono text-[11px] text-muted-fg">Bal {row.balance}</span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 font-mono text-[11px] font-semibold ring-1 ${statusTone(row.status)}`}
+                    >
+                      {row.status}
+                    </span>
                   </div>
-                ))}
+                  <label className="mt-2 flex items-center gap-2">
+                    <span className="text-[11px] text-muted-fg">Order qty</span>
+                    {orderQtyInput(row)}
+                  </label>
+                </div>
               </div>
             )}
-          </div>
+          />
 
           <p className="mt-3 px-1 text-[11px] text-muted-fg">
             Missing = balance is 0 or less. Low = balance is below the threshold. Suggested order qty brings the

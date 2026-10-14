@@ -3,10 +3,11 @@ import { CheckCircle2, CircleDollarSign, Clock, Pencil, Printer, Trash2 } from "
 import { useMemo, useState } from "react";
 
 import { Shell } from "@/components/Shell";
-import { Pagination } from "@/components/Pagination";
+import { DataList } from "@/components/DataList";
+import { useConfirmDelete } from "@/components/confirm-delete";
 import { EditOrderSheet } from "@/components/edit-sheets";
+import { removeOrder, updateOrder, useStore, type ToolOrder } from "@/lib/store";
 import { missingPriceRows, printMissingPricesForm } from "@/lib/missing-prices-form";
-import { removeOrder, updateOrder, useStore } from "@/lib/store";
 
 const PAGE_SIZE = 20;
 const currency = new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" });
@@ -66,15 +67,14 @@ function FillAmountPage() {
     )
     .sort((a, b) => b.purchaseDate.localeCompare(a.purchaseDate));
 
-  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const currentPage = Math.min(page, pageCount);
-  const visibleRows = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  const askDelete = (id: string, name: string) => {
-    if (window.confirm(`Delete this order for ${name}? The item's ordered count will be reduced.`)) {
-      removeOrder(id);
-    }
-  };
+  const { confirmDelete, confirmDialog } = useConfirmDelete();
+  const askDelete = (id: string, name: string) =>
+    confirmDelete({
+      title: `Delete this order for ${name}?`,
+      description: "The item's ordered count will be reduced.",
+      onConfirm: () => removeOrder(id),
+    });
 
   const rowActions = (row: { id: string; itemId: string }) => (
     <div className="flex items-center justify-center gap-1.5">
@@ -97,6 +97,21 @@ function FillAmountPage() {
         <Trash2 size={14} />
       </button>
     </div>
+  );
+
+  const confirmSwitch = (row: ToolOrder) => (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={Boolean(row.confirmed)}
+      aria-label={`${row.confirmed ? "Unconfirm" : "Confirm"} order`}
+      onClick={() => updateOrder(row.id, { confirmed: !row.confirmed })}
+      className={`relative h-5 w-9 shrink-0 rounded-full transition ${row.confirmed ? "bg-good" : "bg-line"}`}
+    >
+      <span
+        className={`absolute top-0.5 size-4 rounded-full bg-panel shadow transition-all ${row.confirmed ? "left-[18px]" : "left-0.5"}`}
+      />
+    </button>
   );
 
   const formatDate = (value: string) => {
@@ -187,89 +202,76 @@ function FillAmountPage() {
             </div>
           </div>
 
-          <div className="glass-surface overflow-hidden rounded-2xl border shadow-xl shadow-accent-brand/5">
-            <div className="hidden grid-cols-[minmax(10rem,1.3fr)_minmax(7rem,0.8fr)_6rem_7rem_6rem_5.5rem] items-center gap-4 border-b border-line px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-fg lg:grid">
-              <span>Item</span>
-              <span>Brand</span>
-              <span className="text-right">Amount</span>
-              <span>Purchase date</span>
-              <span className="text-center">Confirmed</span>
-              <span className="text-center">Actions</span>
-            </div>
-            {visibleRows.length === 0 ? (
-              <p className="px-4 py-8 text-center text-sm text-muted-fg">No matching orders.</p>
-            ) : (
-              <div className="divide-y divide-line">
-                {visibleRows.map((row) => (
-                  <div
-                    key={row.id}
-                    className="px-4 py-3.5 lg:grid lg:grid-cols-[minmax(10rem,1.3fr)_minmax(7rem,0.8fr)_6rem_7rem_6rem_5.5rem] lg:items-center lg:gap-4"
-                  >
-                    <p className="truncate text-sm font-semibold">
-                      {itemById.get(row.itemId) ?? "Removed item"}
-                    </p>
-                    <span className="hidden truncate text-[12px] text-muted-fg lg:block">
-                      {brandById.get(row.brandId) ?? "Removed brand"}
-                    </span>
-                    <span className="hidden text-right font-mono text-[13px] font-semibold lg:block">
-                      {currency.format(row.amount)}
-                    </span>
-                    <span className="hidden font-mono text-[12px] text-muted-fg lg:block">
-                      {formatDate(row.purchaseDate)}
-                    </span>
-                    <div className="hidden justify-center lg:flex">
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={Boolean(row.confirmed)}
-                        aria-label={`${row.confirmed ? "Unconfirm" : "Confirm"} order`}
-                        onClick={() => updateOrder(row.id, { confirmed: !row.confirmed })}
-                        className={`relative h-5 w-9 rounded-full transition ${row.confirmed ? "bg-good" : "bg-line"}`}
-                      >
-                        <span
-                          className={`absolute top-0.5 size-4 rounded-full bg-panel shadow transition-all ${row.confirmed ? "left-[18px]" : "left-0.5"}`}
-                        />
-                      </button>
-                    </div>
-                    <div className="hidden lg:block">{rowActions(row)}</div>
-                    <div className="mt-2 flex items-center justify-between gap-3 lg:hidden">
-                      <p className="font-mono text-[11px] text-muted-fg">
-                        {brandById.get(row.brandId) ?? "Removed brand"} · {currency.format(row.amount)} ·{" "}
-                        {formatDate(row.purchaseDate)}
-                      </p>
-                      <div className="flex shrink-0 items-center gap-2">
-                      {rowActions(row)}
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={Boolean(row.confirmed)}
-                        aria-label={`${row.confirmed ? "Unconfirm" : "Confirm"} order`}
-                        onClick={() => updateOrder(row.id, { confirmed: !row.confirmed })}
-                        className={`relative h-5 w-9 shrink-0 rounded-full transition ${row.confirmed ? "bg-good" : "bg-line"}`}
-                      >
-                        <span
-                          className={`absolute top-0.5 size-4 rounded-full bg-panel shadow transition-all ${row.confirmed ? "left-[18px]" : "left-0.5"}`}
-                        />
-                      </button>
-                      </div>
-                    </div>
+          <DataList
+            rows={rows}
+            pagination={{ page, onPageChange: setPage, pageSize: PAGE_SIZE, itemLabel: "orders" }}
+            rowKey={(row) => row.id}
+            empty={<p className="px-4 py-8 text-center text-sm text-muted-fg">No matching orders.</p>}
+            columns={[
+              {
+                header: "Item",
+                sortValue: (row) => itemById.get(row.itemId) ?? "",
+                width: "minmax(10rem,1.3fr)",
+                cell: (row) => (
+                  <p className="truncate text-sm font-semibold">{itemById.get(row.itemId) ?? "Removed item"}</p>
+                ),
+              },
+              {
+                header: "Brand",
+                sortValue: (row) => brandById.get(row.brandId) ?? "",
+                width: "minmax(7rem,0.8fr)",
+                cell: (row) => (
+                  <span className="block truncate text-[12px] text-muted-fg">
+                    {brandById.get(row.brandId) ?? "Removed brand"}
+                  </span>
+                ),
+              },
+              {
+                header: "Amount",
+                sortValue: (row) => row.amount,
+                width: "6rem",
+                align: "right",
+                cell: (row) => (
+                  <span className="font-mono text-[13px] font-semibold">{currency.format(row.amount)}</span>
+                ),
+              },
+              {
+                header: "Purchase date",
+                sortValue: (row) => row.purchaseDate,
+                width: "7rem",
+                cell: (row) => (
+                  <span className="font-mono text-[12px] text-muted-fg">{formatDate(row.purchaseDate)}</span>
+                ),
+              },
+              {
+                header: "Confirmed",
+                sortValue: (row) => (row.confirmed ? 1 : 0),
+                width: "6rem",
+                align: "center",
+                cell: (row) => <div className="flex justify-center">{confirmSwitch(row)}</div>,
+              },
+              { header: "Actions", width: "5.5rem", align: "center", cell: rowActions },
+            ]}
+            card={(row) => (
+              <>
+                <p className="truncate text-sm font-semibold">{itemById.get(row.itemId) ?? "Removed item"}</p>
+                <div className="mt-2 flex items-center justify-between gap-3">
+                  <p className="font-mono text-[11px] text-muted-fg">
+                    {brandById.get(row.brandId) ?? "Removed brand"} · {currency.format(row.amount)} ·{" "}
+                    {formatDate(row.purchaseDate)}
+                  </p>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {rowActions(row)}
+                    {confirmSwitch(row)}
                   </div>
-                ))}
-              </div>
+                </div>
+              </>
             )}
-          </div>
-
-          <Pagination
-            page={currentPage}
-            pageCount={pageCount}
-            onPageChange={setPage}
-            totalCount={rows.length}
-            pageSize={PAGE_SIZE}
-            itemLabel="orders"
           />
         </section>
       </div>
       <EditOrderSheet order={orders.find((o) => o.id === editId) ?? null} onClose={() => setEditId(null)} />
+      {confirmDialog}
     </Shell>
   );
 }

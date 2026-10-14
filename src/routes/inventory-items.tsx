@@ -4,9 +4,15 @@ import { Pencil, Search, ShoppingCart, Trash2, UserPlus, X } from "lucide-react"
 import { toast } from "sonner";
 
 import { Shell, fieldClass, labelClass } from "@/components/Shell";
+import { useConfirmDelete } from "@/components/confirm-delete";
 import { AddButton, Sheet, SideSheet } from "@/components/Sheet";
-import { Pagination } from "@/components/Pagination";
-import { EditAssignmentSheet, EditOrderSheet, LocationSelect } from "@/components/edit-sheets";
+import { DataList } from "@/components/DataList";
+import {
+  EditAssignmentSheet,
+  EditOrderSheet,
+  LocationSelect,
+  formatDate,
+} from "@/components/edit-sheets";
 
 import {
   addAssignment,
@@ -50,6 +56,7 @@ export const Route = createFileRoute("/inventory-items")({
 
 function InventoryItemsPage() {
   const { toolTypes, items, brands, orders, users, assignments, machines } = useStore();
+  const { confirmDelete, confirmDialog } = useConfirmDelete();
   const routeSearch = Route.useSearch();
   const [orderItemId, setOrderItemId] = useState<string | null>(null);
   const [assignItemId, setAssignItemId] = useState<string | null>(null);
@@ -105,9 +112,6 @@ function InventoryItemsPage() {
   const filtersActive = search.trim() !== "" || filterTypeId !== "all" || balanceFilter !== "all";
 
   const PAGE_SIZE = 20;
-  const pageCount = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
-  const currentPage = Math.min(page, pageCount);
-  const visibleItems = filteredItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   useEffect(() => setPage(1), [search, filterTypeId, balanceFilter]);
 
@@ -245,6 +249,68 @@ function InventoryItemsPage() {
     setLocation("");
     setAssignMachineId("");
   };
+
+  const balanceTones = (item: InventoryItem) => {
+    const itemBalance = balanceOf(item);
+    if (itemBalance < item.threshold)
+      return { pill: "bg-destructive/15 text-destructive ring-destructive/25", dot: "bg-destructive" };
+    if (itemBalance === item.threshold) return { pill: "bg-warn-soft text-warn ring-warn/25", dot: "bg-warn" };
+    return { pill: "bg-good-soft text-good ring-good/25", dot: "bg-good" };
+  };
+
+  const itemTitle = (item: InventoryItem) => (
+    <div className="min-w-0">
+      <p className="truncate text-sm font-semibold">
+        {item.name}
+        {item.essential && (
+          <span className="ml-2 rounded-full bg-chip px-2 py-0.5 align-middle font-mono text-[10px] text-muted-fg">
+            essential
+          </span>
+        )}
+      </p>
+      <p className="truncate text-[12px] text-muted-fg">
+        {typeName(item.typeId)} · {item.returnable}
+      </p>
+    </div>
+  );
+
+  const rowActions = (item: InventoryItem) => (
+    <div className="flex items-center justify-end gap-1.5">
+      <button
+        onClick={() => openOrder(item.id)}
+        aria-label={`Order ${item.name}`}
+        title="Order"
+        className="grid size-8 shrink-0 place-items-center rounded-full bg-chip text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
+      >
+        <ShoppingCart size={14} />
+      </button>
+      <button
+        onClick={() => openAssign(item.id)}
+        aria-label={`Assign ${item.name}`}
+        title="Assign"
+        className="grid size-8 shrink-0 place-items-center rounded-full bg-chip text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
+      >
+        <UserPlus size={14} />
+      </button>
+      <button
+        onClick={() => openEdit(item)}
+        aria-label={`Edit ${item.name}`}
+        title="Edit"
+        className="grid size-8 shrink-0 place-items-center rounded-full bg-chip text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
+      >
+        <Pencil size={14} />
+      </button>
+      <button
+        onClick={() =>
+          confirmDelete({ title: `Delete ${item.name}?`, description: "This cannot be undone.", onConfirm: () => removeItem(item.id) })}
+        aria-label={`Remove ${item.name}`}
+        title="Remove"
+        className="grid size-8 shrink-0 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn"
+      >
+        <Trash2 size={14} />
+      </button>
+    </div>
+  );
 
   return (
     <Shell
@@ -439,130 +505,81 @@ function InventoryItemsPage() {
             )}
           </div>
 
-          <div className="glass-surface overflow-hidden rounded-2xl border shadow-xl shadow-accent-brand/5">
-            <div className="hidden items-center gap-4 border-b border-line px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-fg lg:grid lg:grid-cols-[minmax(0,1fr)_repeat(4,4.5rem)_13rem]">
-              <span>Item</span>
-              <span className="text-right">Thr</span>
-              <span className="text-right">Ordered</span>
-              <span className="text-right">Issued</span>
-              <span className="text-right">Balance</span>
-              <span className="text-right">Actions</span>
-            </div>
-
-            <div className="divide-y divide-line">
-              {filteredItems.length === 0 && (
-                <p className="px-4 py-8 text-center text-sm text-muted-fg">
-                  {items.length === 0 ? "No items logged yet." : "No items match these filters."}
-                </p>
-              )}
-              {visibleItems.map((item) => {
-                const itemBalance = balanceOf(item);
-                const balanceTone = itemBalance < item.threshold
-                  ? "bg-destructive/15 text-destructive ring-destructive/25"
-                  : itemBalance === item.threshold
-                    ? "bg-warn-soft text-warn ring-warn/25"
-                    : "bg-good-soft text-good ring-good/25";
-                const dotTone = itemBalance < item.threshold
-                  ? "bg-destructive"
-                  : itemBalance === item.threshold
-                    ? "bg-warn"
-                    : "bg-good";
-                return (
-                  <div
-                    key={item.id}
-                    className="px-4 py-3.5 transition-colors hover:bg-panel/40 lg:grid lg:grid-cols-[minmax(0,1fr)_repeat(4,4.5rem)_13rem] lg:items-center lg:gap-4"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold">
-                        {item.name}
-                        {item.essential && (
-                          <span className="ml-2 rounded-full bg-chip px-2 py-0.5 align-middle font-mono text-[10px] text-muted-fg">
-                            essential
-                          </span>
-                        )}
-                      </p>
-                      <p className="truncate text-[12px] text-muted-fg">
-                        {typeName(item.typeId)} · {item.returnable}
-                      </p>
-                    </div>
-
-                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 lg:hidden">
-                      <span className="font-mono text-[11px] text-muted-fg">
-                        Thr {item.threshold}
-                      </span>
-                      <span className="font-mono text-[11px] text-muted-fg">
-                        Ord <span className="text-ink">{item.ordered}</span>
-                      </span>
-                      <span className="font-mono text-[11px] text-muted-fg">
-                        Iss <span className="text-ink">{item.issued}</span>
-                      </span>
-                      <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-[11px] font-semibold ring-1 ${balanceTone}`}>
-                        <span className={`size-1.5 rounded-full ${dotTone}`} />
-                        Bal {itemBalance}
-                      </span>
-                    </div>
-
-                    <span className="hidden text-right font-mono text-[13px] text-muted-fg lg:block">
-                      {item.threshold}
+          <DataList
+            rows={filteredItems}
+            pagination={{ page, onPageChange: setPage, pageSize: PAGE_SIZE, itemLabel: "items" }}
+            rowKey={(item) => item.id}
+            empty={
+              <p className="px-4 py-8 text-center text-sm text-muted-fg">
+                {items.length === 0 ? "No items logged yet." : "No items match these filters."}
+              </p>
+            }
+            columns={[
+              { header: "Item", sortValue: (item) => item.name, width: "minmax(0,1fr)", cell: itemTitle },
+              {
+                header: "Thr",
+                sortValue: (item) => item.threshold,
+                width: "4.5rem",
+                align: "right",
+                cell: (item) => <span className="font-mono text-[13px] text-muted-fg">{item.threshold}</span>,
+              },
+              {
+                header: "Ordered",
+                sortValue: (item) => item.ordered,
+                width: "4.5rem",
+                align: "right",
+                cell: (item) => <span className="font-mono text-[13px] text-muted-fg">{item.ordered}</span>,
+              },
+              {
+                header: "Issued",
+                sortValue: (item) => item.issued,
+                width: "4.5rem",
+                align: "right",
+                cell: (item) => <span className="font-mono text-[13px] text-muted-fg">{item.issued}</span>,
+              },
+              {
+                header: "Balance",
+                sortValue: (item) => balanceOf(item),
+                width: "4.5rem",
+                align: "right",
+                cell: (item) => {
+                  const tones = balanceTones(item);
+                  return (
+                    <span
+                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-sm font-semibold ring-1 ${tones.pill}`}
+                    >
+                      <span className={`size-1.5 rounded-full ${tones.dot}`} />
+                      {balanceOf(item)}
                     </span>
-                    <span className="hidden text-right font-mono text-[13px] text-muted-fg lg:block">
-                      {item.ordered}
+                  );
+                },
+              },
+              { header: "Actions", width: "13rem", align: "right", cell: rowActions },
+            ]}
+            card={(item) => {
+              const tones = balanceTones(item);
+              return (
+                <>
+                  {itemTitle(item)}
+                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                    <span className="font-mono text-[11px] text-muted-fg">Thr {item.threshold}</span>
+                    <span className="font-mono text-[11px] text-muted-fg">
+                      Ord <span className="text-ink">{item.ordered}</span>
                     </span>
-                    <span className="hidden text-right font-mono text-[13px] text-muted-fg lg:block">
-                      {item.issued}
+                    <span className="font-mono text-[11px] text-muted-fg">
+                      Iss <span className="text-ink">{item.issued}</span>
                     </span>
-                    <span className={`hidden items-center justify-self-end gap-1.5 rounded-full px-2.5 py-1 font-mono text-sm font-semibold ring-1 lg:inline-flex ${balanceTone}`}>
-                      <span className={`size-1.5 rounded-full ${dotTone}`} />
-                      {itemBalance}
+                    <span
+                      className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-[11px] font-semibold ring-1 ${tones.pill}`}
+                    >
+                      <span className={`size-1.5 rounded-full ${tones.dot}`} />
+                      Bal {balanceOf(item)}
                     </span>
-
-                    <div className="mt-3 flex items-center justify-end gap-1.5 lg:mt-0 lg:justify-self-end">
-                        <button
-                          onClick={() => openOrder(item.id)}
-                          aria-label={`Order ${item.name}`}
-                          title="Order"
-                          className="grid size-8 shrink-0 place-items-center rounded-full bg-chip text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
-                        >
-                          <ShoppingCart size={14} />
-                        </button>
-                        <button
-                          onClick={() => openAssign(item.id)}
-                          aria-label={`Assign ${item.name}`}
-                          title="Assign"
-                          className="grid size-8 shrink-0 place-items-center rounded-full bg-chip text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
-                        >
-                          <UserPlus size={14} />
-                        </button>
-                        <button
-                          onClick={() => openEdit(item)}
-                          aria-label={`Edit ${item.name}`}
-                          title="Edit"
-                          className="grid size-8 shrink-0 place-items-center rounded-full bg-chip text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button
-                          onClick={() => removeItem(item.id)}
-                          aria-label={`Remove ${item.name}`}
-                          title="Remove"
-                          className="grid size-8 shrink-0 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                    </div>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <Pagination
-            page={currentPage}
-            pageCount={pageCount}
-            onPageChange={setPage}
-            totalCount={filteredItems.length}
-            pageSize={PAGE_SIZE}
-            itemLabel="items"
+                  <div className="mt-3">{rowActions(item)}</div>
+                </>
+              );
+            }}
           />
         </section>
       </div>
@@ -672,7 +689,7 @@ function InventoryItemsPage() {
                       {brandName(o.brandId)} · {o.qtyOrdered} qty
                     </p>
                     <p className="truncate font-mono text-[11px] text-muted-fg">
-                      {o.purchaseDate} · {o.amount.toFixed(2)}
+                      {formatDate(o.purchaseDate)} · {o.amount.toFixed(2)}
                       {o.documentName ? ` · ${o.documentName}` : ""}
                     </p>
                   </div>
@@ -686,7 +703,8 @@ function InventoryItemsPage() {
                       <Pencil size={13} />
                     </button>
                     <button
-                      onClick={() => removeOrder(o.id)}
+                      onClick={() =>
+                        confirmDelete({ title: "Delete this order?", description: "The item's ordered count will be reduced.", onConfirm: () => removeOrder(o.id) })}
                       aria-label="Remove order"
                       title="Remove"
                       className="grid size-8 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn"
@@ -863,7 +881,7 @@ function InventoryItemsPage() {
                       {userName(a.userId)} · {a.qtyIssued} qty
                     </p>
                     <p className="truncate font-mono text-[11px] text-muted-fg">
-                      {a.issuedDate} · {a.issuedFrom}
+                      {formatDate(a.issuedDate)} · {a.issuedFrom}
                     </p>
                     {(a.jobNumber || a.drawingNumber) && (
                       <p className="truncate font-mono text-[11px] text-muted-fg">
@@ -893,7 +911,8 @@ function InventoryItemsPage() {
                       <Pencil size={13} />
                     </button>
                     <button
-                      onClick={() => removeAssignment(a.id)}
+                      onClick={() =>
+                        confirmDelete({ title: "Delete this assignment?", description: "The item's issued count will be restored.", onConfirm: () => removeAssignment(a.id) })}
                       aria-label="Remove assignment"
                       title="Remove"
                       className="grid size-8 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn"
@@ -910,6 +929,7 @@ function InventoryItemsPage() {
 
       <EditOrderSheet order={orders.find((o) => o.id === editOrderId) ?? null} onClose={() => setEditOrderId(null)} />
       <EditAssignmentSheet assignment={assignments.find((a) => a.id === editAssignId) ?? null} onClose={() => setEditAssignId(null)} />
+      {confirmDialog}
     </Shell>
   );
 }

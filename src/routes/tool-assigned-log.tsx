@@ -3,7 +3,8 @@ import { Pencil, Search, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Shell, fieldClass } from "@/components/Shell";
-import { Pagination } from "@/components/Pagination";
+import { DataList } from "@/components/DataList";
+import { useConfirmDelete } from "@/components/confirm-delete";
 import { DetailSheet, EditAssignmentSheet, formatDate } from "@/components/edit-sheets";
 import { balanceOf, removeAssignment, useStore, type ToolAssignment } from "@/lib/store";
 
@@ -148,9 +149,6 @@ export function ToolAssignedLogPage({
       });
   }, [assignments, dateFrom, dateTo, items, machines, quantity, recipient, tool, toolTypes, type, users]);
 
-  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const currentPage = Math.min(page, pageCount);
-  const visibleRows = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const hasFilters = Boolean(dateFrom || dateTo || quantity || tool || type || recipient);
 
   useEffect(() => setPage(1), [dateFrom, dateTo, quantity, tool, type, recipient]);
@@ -168,12 +166,47 @@ export function ToolAssignedLogPage({
   const detailRow = rows.find((row) => row.id === detailId) ?? null;
   const editAssignment: ToolAssignment | null = assignments.find((a) => a.id === editId) ?? null;
 
-  const askDelete = (row: { id: string; toolName: string; recipientName: string }) => {
-    if (window.confirm(`Delete this record (${row.toolName} -> ${row.recipientName})? The item's issued count will be restored.`)) {
-      removeAssignment(row.id);
-      setDetailId((current) => (current === row.id ? null : current));
-    }
-  };
+  const { confirmDelete, confirmDialog } = useConfirmDelete();
+  const askDelete = (row: { id: string; toolName: string; recipientName: string }) =>
+    confirmDelete({
+      title: `Delete this record (${row.toolName} → ${row.recipientName})?`,
+      description: "The item's issued count will be restored.",
+      onConfirm: () => {
+        removeAssignment(row.id);
+        setDetailId((current) => (current === row.id ? null : current));
+      },
+    });
+
+  type LogRow = (typeof rows)[number];
+
+  const rowActions = (row: LogRow) => (
+    <div className="flex items-center justify-center gap-1.5">
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          setEditId(row.id);
+        }}
+        aria-label={`Edit assignment of ${row.toolName}`}
+        title="Edit"
+        className="grid size-8 shrink-0 place-items-center rounded-full bg-chip text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
+      >
+        <Pencil size={14} />
+      </button>
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          askDelete(row);
+        }}
+        aria-label={`Delete assignment of ${row.toolName}`}
+        title="Delete"
+        className="grid size-8 shrink-0 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn"
+      >
+        <Trash2 size={14} />
+      </button>
+    </div>
+  );
 
   return (
     <Shell eyebrow={eyebrow} title={title}>
@@ -239,123 +272,116 @@ export function ToolAssignedLogPage({
             ))}
           </div>
 
-          <div className="glass-surface overflow-x-auto rounded-2xl border shadow-xl shadow-accent-brand/5">
-            <div className="hidden min-w-[78rem] items-center gap-3 border-b border-line px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-fg xl:grid xl:grid-cols-[minmax(11rem,1.3fr)_minmax(7rem,0.7fr)_6.5rem_4.5rem_4.5rem_minmax(8rem,0.8fr)_minmax(8rem,0.8fr)_minmax(6rem,0.6fr)_minmax(6rem,0.6fr)_5.5rem]">
-              <span>Item</span>
-              <span>Tool type</span>
-              <span>Issued date</span>
-              <span className="text-right">Issued</span>
-              <span className="text-right">Balance</span>
-              <span>Issued to</span>
-              <span>Location / Machine</span>
-              <span>Job no.</span>
-              <span>Drawing no.</span>
-              <span className="text-center">Actions</span>
-            </div>
-
-            {visibleRows.length === 0 ? (
+          <DataList
+            rows={rows}
+            pagination={{ page, onPageChange: setPage, pageSize: PAGE_SIZE, itemLabel: "records" }}
+            rowKey={(row) => row.id}
+            breakpoint="xl"
+            minWidth="78rem"
+            onRowClick={(row) => setDetailId(row.id)}
+            empty={
               <div className="px-5 py-14 text-center">
                 <p className="text-sm font-semibold">{hasFilters ? "No matching records" : "No assignments yet"}</p>
-                <p className="mt-1 text-[12px] text-muted-fg">{hasFilters ? "Try clearing or changing the filters." : "Assignments saved from Inventory Items will appear here."}</p>
+                <p className="mt-1 text-[12px] text-muted-fg">
+                  {hasFilters ? "Try clearing or changing the filters." : "Assignments saved from Inventory Items will appear here."}
+                </p>
               </div>
-            ) : (
-              <div className="divide-y divide-line">
-                {visibleRows.map((row) => {
-                  const actions = (
-                    <div className="flex items-center justify-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setEditId(row.id);
-                        }}
-                        aria-label={`Edit assignment of ${row.toolName}`}
-                        title="Edit"
-                        className="grid size-8 shrink-0 place-items-center rounded-full bg-chip text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          askDelete(row);
-                        }}
-                        aria-label={`Delete assignment of ${row.toolName}`}
-                        title="Delete"
-                        className="grid size-8 shrink-0 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  );
-                  return (
-                    <article
-                      key={row.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => setDetailId(row.id)}
-                      onKeyDown={(event) => {
-                        if (event.target !== event.currentTarget) return;
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          setDetailId(row.id);
-                        }
-                      }}
-                      className="cursor-pointer px-4 py-3.5 transition-colors hover:bg-panel/40 xl:grid xl:min-w-[78rem] xl:grid-cols-[minmax(11rem,1.3fr)_minmax(7rem,0.7fr)_6.5rem_4.5rem_4.5rem_minmax(8rem,0.8fr)_minmax(8rem,0.8fr)_minmax(6rem,0.6fr)_minmax(6rem,0.6fr)_5.5rem] xl:items-center xl:gap-3"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold">{row.toolName}</p>
-                        <p className="truncate text-[12px] text-muted-fg xl:hidden">{row.toolType}</p>
-                      </div>
-                      <span className="hidden truncate text-[12px] text-muted-fg xl:block">{row.toolType}</span>
-                      <span className="hidden font-mono text-[12px] xl:block">{formatDate(row.issuedDate)}</span>
-                      <span className="hidden text-right font-mono text-[13px] text-muted-fg xl:block">{row.qtyIssued}</span>
-                      <span className="hidden text-right font-mono text-[13px] font-semibold xl:block">{row.balance}</span>
-                      <div className="hidden min-w-0 items-center gap-2 xl:flex">
-                        <span className="grid size-7 shrink-0 place-items-center rounded-full bg-chip text-[10px] font-bold text-accent-brand">{row.recipientName.charAt(0).toUpperCase()}</span>
-                        <span className="truncate text-[13px]">{row.recipientName}</span>
-                      </div>
-                      <span className="hidden truncate text-[12px] text-muted-fg xl:block">
-                        {[row.location, row.machineName].filter(Boolean).join(" · ") || "—"}
-                      </span>
-                      <span className="hidden truncate font-mono text-[12px] xl:block">{row.jobNumber || "—"}</span>
-                      <span className="hidden truncate font-mono text-[12px] xl:block">{row.drawingNumber || "—"}</span>
-                      <div className="hidden xl:block">{actions}</div>
-
-                      <div className="mt-2 flex items-center gap-4 xl:hidden">
-                        <div><p className="text-[10px] uppercase text-muted-fg">Date</p><p className="font-mono text-[11px]">{formatDate(row.issuedDate)}</p></div>
-                        <div><p className="text-[10px] uppercase text-muted-fg">Issued</p><p className="font-mono text-[11px] font-semibold">{row.qtyIssued}</p></div>
-                        <div><p className="text-[10px] uppercase text-muted-fg">Balance</p><p className="font-mono text-[11px] font-semibold">{row.balance}</p></div>
-                      </div>
-                      <p className="mt-2 text-[12px] xl:hidden">Issued to <span className="font-semibold">{row.recipientName}</span></p>
-                      {(row.location || row.machineName) && (
-                        <p className="mt-1 text-[12px] text-muted-fg xl:hidden">
-                          {[row.location, row.machineName].filter(Boolean).join(" · ")}
-                        </p>
-                      )}
-                      {(row.jobNumber || row.drawingNumber) && (
-                        <p className="mt-1 font-mono text-[11px] text-muted-fg xl:hidden">
-                          {row.jobNumber && <>Job {row.jobNumber}</>}
-                          {row.jobNumber && row.drawingNumber ? " · " : ""}
-                          {row.drawingNumber && <>Dwg {row.drawingNumber}</>}
-                        </p>
-                      )}
-                      <div className="mt-2 flex justify-end xl:hidden">{actions}</div>
-                    </article>
-                  );
-                })}
-              </div>
+            }
+            columns={[
+              {
+                header: "Item",
+                sortValue: (row) => row.toolName,
+                width: "minmax(11rem,1.3fr)",
+                cell: (row) => <p className="truncate text-sm font-semibold">{row.toolName}</p>,
+              },
+              {
+                header: "Tool type",
+                sortValue: (row) => row.toolType,
+                width: "minmax(7rem,0.7fr)",
+                cell: (row) => <span className="block truncate text-[12px] text-muted-fg">{row.toolType}</span>,
+              },
+              {
+                header: "Issued date",
+                sortValue: (row) => row.issuedDate,
+                width: "6.5rem",
+                cell: (row) => <span className="font-mono text-[12px]">{formatDate(row.issuedDate)}</span>,
+              },
+              {
+                header: "Issued",
+                sortValue: (row) => row.qtyIssued,
+                width: "4.5rem",
+                align: "right",
+                cell: (row) => <span className="font-mono text-[13px] text-muted-fg">{row.qtyIssued}</span>,
+              },
+              {
+                header: "Balance",
+                sortValue: (row) => row.balance,
+                width: "4.5rem",
+                align: "right",
+                cell: (row) => <span className="font-mono text-[13px] font-semibold">{row.balance}</span>,
+              },
+              {
+                header: "Issued to",
+                sortValue: (row) => row.recipientName,
+                width: "minmax(8rem,0.8fr)",
+                cell: (row) => (
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="grid size-7 shrink-0 place-items-center rounded-full bg-chip text-[10px] font-bold text-accent-brand">
+                      {row.recipientName.charAt(0).toUpperCase()}
+                    </span>
+                    <span className="truncate text-[13px]">{row.recipientName}</span>
+                  </div>
+                ),
+              },
+              {
+                header: "Location / Machine",
+                sortValue: (row) => [row.location, row.machineName].filter(Boolean).join(" "),
+                width: "minmax(8rem,0.8fr)",
+                cell: (row) => (
+                  <span className="block truncate text-[12px] text-muted-fg">
+                    {[row.location, row.machineName].filter(Boolean).join(" · ") || "—"}
+                  </span>
+                ),
+              },
+              {
+                header: "Job no.",
+                sortValue: (row) => row.jobNumber,
+                width: "minmax(6rem,0.6fr)",
+                cell: (row) => <span className="block truncate font-mono text-[12px]">{row.jobNumber || "—"}</span>,
+              },
+              {
+                header: "Drawing no.",
+                sortValue: (row) => row.drawingNumber,
+                width: "minmax(6rem,0.6fr)",
+                cell: (row) => <span className="block truncate font-mono text-[12px]">{row.drawingNumber || "—"}</span>,
+              },
+              { header: "Actions", width: "5.5rem", align: "center", cell: rowActions },
+            ]}
+            card={(row) => (
+              <>
+                <p className="truncate text-sm font-semibold">{row.toolName}</p>
+                <p className="truncate text-[12px] text-muted-fg">{row.toolType}</p>
+                <div className="mt-2 flex items-center gap-4">
+                  <div><p className="text-[10px] uppercase text-muted-fg">Date</p><p className="font-mono text-[11px]">{formatDate(row.issuedDate)}</p></div>
+                  <div><p className="text-[10px] uppercase text-muted-fg">Issued</p><p className="font-mono text-[11px] font-semibold">{row.qtyIssued}</p></div>
+                  <div><p className="text-[10px] uppercase text-muted-fg">Balance</p><p className="font-mono text-[11px] font-semibold">{row.balance}</p></div>
+                </div>
+                <p className="mt-2 text-[12px]">Issued to <span className="font-semibold">{row.recipientName}</span></p>
+                {(row.location || row.machineName) && (
+                  <p className="mt-1 text-[12px] text-muted-fg">
+                    {[row.location, row.machineName].filter(Boolean).join(" · ")}
+                  </p>
+                )}
+                {(row.jobNumber || row.drawingNumber) && (
+                  <p className="mt-1 font-mono text-[11px] text-muted-fg">
+                    {row.jobNumber && <>Job {row.jobNumber}</>}
+                    {row.jobNumber && row.drawingNumber ? " · " : ""}
+                    {row.drawingNumber && <>Dwg {row.drawingNumber}</>}
+                  </p>
+                )}
+                <div className="mt-2 flex justify-end">{rowActions(row)}</div>
+              </>
             )}
-          </div>
-
-          <Pagination
-            page={currentPage}
-            pageCount={pageCount}
-            onPageChange={setPage}
-            totalCount={rows.length}
-            pageSize={PAGE_SIZE}
-            itemLabel="records"
           />
         </section>
       </div>
@@ -407,6 +433,7 @@ export function ToolAssignedLogPage({
         }
       />
       <EditAssignmentSheet assignment={editAssignment} onClose={() => setEditId(null)} />
+      {confirmDialog}
     </Shell>
   );
 }

@@ -17,11 +17,14 @@ export function Sheet({
   open,
   title,
   onClose,
+  wide = false,
   children,
 }: {
   open: boolean;
   title: string;
   onClose: () => void;
+  /** Wider panel on desktop, for forms laid out in two columns. */
+  wide?: boolean;
   children: ReactNode;
 }) {
   useEffect(() => {
@@ -42,7 +45,9 @@ export function Sheet({
         onClick={onClose}
         className="absolute inset-0 bg-overlay backdrop-blur-sm"
       />
-      <div className="glass-surface animate-rise relative max-h-[85vh] w-full overflow-y-auto rounded-t-3xl border p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl shadow-accent-brand/15 sm:max-h-[90vh] sm:max-w-md sm:rounded-2xl sm:pb-5">
+      <div
+        className={`glass-surface animate-rise relative max-h-[85vh] w-full overflow-y-auto rounded-t-3xl border p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl shadow-accent-brand/15 sm:max-h-[90vh] sm:rounded-2xl sm:pb-5 ${wide ? "sm:max-w-3xl" : "sm:max-w-md"}`}
+      >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-display text-base font-semibold">{title}</h2>
           <button

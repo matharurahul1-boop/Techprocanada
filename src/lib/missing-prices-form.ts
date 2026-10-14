@@ -83,8 +83,9 @@ export function printMissingPricesForm(rows: MissingPriceRow[]) {
     return;
   }
   const now = new Date();
-  const today = now.toLocaleDateString("en-CA");
-  const stamp = `${today.replace(/-/g, "")}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+  const isoToday = now.toLocaleDateString("en-CA");
+  const today = now.toLocaleDateString("en-GB");
+  const stamp = `${isoToday.replace(/-/g, "")}-${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
   const logoUrl = new URL(techProLogo, window.location.origin).href;
   const totalQty = rows.reduce((sum, r) => sum + r.qty, 0);
 

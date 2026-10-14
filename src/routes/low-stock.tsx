@@ -3,8 +3,8 @@ import { Search, TriangleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Shell, fieldClass } from "@/components/Shell";
-import { Pagination } from "@/components/Pagination";
-import { balanceOf, useStore } from "@/lib/store";
+import { DataList } from "@/components/DataList";
+import { balanceOf, useStore, type InventoryItem } from "@/lib/store";
 
 const PAGE_SIZE = 20;
 
@@ -45,11 +45,22 @@ function LowStockPage() {
   const essentialCount = lowItems.filter((item) => item.essential).length;
   const filtersActive = search.trim() !== "" || filterTypeId !== "all";
 
-  const pageCount = Math.max(1, Math.ceil(lowItems.length / PAGE_SIZE));
-  const currentPage = Math.min(page, pageCount);
-  const visibleItems = lowItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   useEffect(() => setPage(1), [search, filterTypeId]);
+
+  const balanceTone = (item: InventoryItem) =>
+    balanceOf(item) < 0 ? "text-destructive" : "text-warn";
+
+  const itemName = (item: InventoryItem) => (
+    <p className="truncate text-sm font-semibold">
+      {item.name}
+      {item.essential && (
+        <span className="ml-2 rounded-full bg-chip px-2 py-0.5 align-middle font-mono text-[10px] text-muted-fg">
+          essential
+        </span>
+      )}
+    </p>
+  );
 
   return (
     <Shell eyebrow="Stock health" title="Low Stock">
@@ -94,17 +105,11 @@ function LowStockPage() {
             </div>
           </div>
 
-          <div className="glass-surface overflow-hidden rounded-2xl border shadow-xl shadow-accent-brand/5">
-            <div className="hidden grid-cols-[minmax(12rem,1.4fr)_minmax(8rem,0.8fr)_5rem_5rem_6rem_6rem] items-center gap-4 border-b border-line px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-fg lg:grid">
-              <span>Item</span>
-              <span>Tool type</span>
-              <span className="text-right">Ordered</span>
-              <span className="text-right">Issued</span>
-              <span className="text-right">Threshold</span>
-              <span className="text-right">Balance</span>
-            </div>
-
-            {lowItems.length === 0 ? (
+          <DataList
+            rows={lowItems}
+            pagination={{ page, onPageChange: setPage, pageSize: PAGE_SIZE, itemLabel: "items" }}
+            rowKey={(item) => item.id}
+            empty={
               <div className="px-5 py-14 text-center">
                 <TriangleAlert className="mx-auto text-good" size={26} />
                 <p className="mt-3 text-sm font-semibold">
@@ -116,72 +121,62 @@ function LowStockPage() {
                     : "Nothing is at or below its threshold right now."}
                 </p>
               </div>
-            ) : (
-              <div className="divide-y divide-line">
-                {visibleItems.map((item) => {
-                  const balance = balanceOf(item);
-                  const critical = balance < 0;
-                  return (
-                    <div
-                      key={item.id}
-                      className="px-4 py-3.5 lg:grid lg:grid-cols-[minmax(12rem,1.4fr)_minmax(8rem,0.8fr)_5rem_5rem_6rem_6rem] lg:items-center lg:gap-4"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold">
-                          {item.name}
-                          {item.essential && (
-                            <span className="ml-2 rounded-full bg-chip px-2 py-0.5 align-middle font-mono text-[10px] text-muted-fg">
-                              essential
-                            </span>
-                          )}
-                        </p>
-                        <p className="truncate text-[12px] text-muted-fg lg:hidden">{typeName(item.typeId)}</p>
-                      </div>
-                      <span className="hidden truncate text-[12px] text-muted-fg lg:block">
-                        {typeName(item.typeId)}
-                      </span>
-                      <span className="hidden text-right font-mono text-[13px] text-muted-fg lg:block">
-                        {item.ordered}
-                      </span>
-                      <span className="hidden text-right font-mono text-[13px] text-muted-fg lg:block">
-                        {item.issued}
-                      </span>
-                      <span className="hidden text-right font-mono text-[13px] text-muted-fg lg:block">
-                        {item.threshold}
-                      </span>
-                      <span
-                        className={`hidden text-right font-mono text-sm font-bold lg:block ${
-                          critical ? "text-destructive" : "text-warn"
-                        }`}
-                      >
-                        {balance}
-                      </span>
-                      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 lg:hidden">
-                        <span className="font-mono text-[11px] text-muted-fg">Ord {item.ordered}</span>
-                        <span className="font-mono text-[11px] text-muted-fg">Iss {item.issued}</span>
-                        <span className="font-mono text-[11px] text-muted-fg">Thr {item.threshold}</span>
-                        <span
-                          className={`font-mono text-[11px] font-bold ${
-                            critical ? "text-destructive" : "text-warn"
-                          }`}
-                        >
-                          Bal {balance}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+            }
+            columns={[
+              { header: "Item", sortValue: (item) => item.name, width: "minmax(12rem,1.4fr)", cell: itemName },
+              {
+                header: "Tool type",
+                sortValue: (item) => typeName(item.typeId),
+                width: "minmax(8rem,0.8fr)",
+                cell: (item) => (
+                  <span className="block truncate text-[12px] text-muted-fg">{typeName(item.typeId)}</span>
+                ),
+              },
+              {
+                header: "Ordered",
+                sortValue: (item) => item.ordered,
+                width: "5rem",
+                align: "right",
+                cell: (item) => <span className="font-mono text-[13px] text-muted-fg">{item.ordered}</span>,
+              },
+              {
+                header: "Issued",
+                sortValue: (item) => item.issued,
+                width: "5rem",
+                align: "right",
+                cell: (item) => <span className="font-mono text-[13px] text-muted-fg">{item.issued}</span>,
+              },
+              {
+                header: "Threshold",
+                sortValue: (item) => item.threshold,
+                width: "6rem",
+                align: "right",
+                cell: (item) => <span className="font-mono text-[13px] text-muted-fg">{item.threshold}</span>,
+              },
+              {
+                header: "Balance",
+                sortValue: (item) => balanceOf(item),
+                width: "6rem",
+                align: "right",
+                cell: (item) => (
+                  <span className={`font-mono text-sm font-bold ${balanceTone(item)}`}>{balanceOf(item)}</span>
+                ),
+              },
+            ]}
+            card={(item) => (
+              <>
+                {itemName(item)}
+                <p className="truncate text-[12px] text-muted-fg">{typeName(item.typeId)}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <span className="font-mono text-[11px] text-muted-fg">Ord {item.ordered}</span>
+                  <span className="font-mono text-[11px] text-muted-fg">Iss {item.issued}</span>
+                  <span className="font-mono text-[11px] text-muted-fg">Thr {item.threshold}</span>
+                  <span className={`font-mono text-[11px] font-bold ${balanceTone(item)}`}>
+                    Bal {balanceOf(item)}
+                  </span>
+                </div>
+              </>
             )}
-          </div>
-
-          <Pagination
-            page={currentPage}
-            pageCount={pageCount}
-            onPageChange={setPage}
-            totalCount={lowItems.length}
-            pageSize={PAGE_SIZE}
-            itemLabel="items"
           />
 
           <Link

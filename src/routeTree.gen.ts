@@ -14,19 +14,26 @@ import { Route as BrandRouteImport } from './routes/brand'
 import { Route as CompanyRouteImport } from './routes/company'
 import { Route as EssentialReportRouteImport } from './routes/essential-report'
 import { Route as FillAmountRouteImport } from './routes/fill-amount'
+import { Route as InspectionsRouteImport } from './routes/inspections'
 import { Route as InstallAppRouteImport } from './routes/install-app'
 import { Route as InventoryItemsRouteImport } from './routes/inventory-items'
+import { Route as JobRouteImport } from './routes/job'
+import { Route as JobsNewRouteImport } from './routes/jobs-new'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LowStockRouteImport } from './routes/low-stock'
 import { Route as MachineHoursRouteImport } from './routes/machine-hours'
 import { Route as MachinesRouteImport } from './routes/machines'
+import { Route as MachiningHoursRouteImport } from './routes/machining-hours'
+import { Route as MiiOrderDetailsRouteImport } from './routes/mii-order-details'
 import { Route as MonthlyExpenseRouteImport } from './routes/monthly-expense'
+import { Route as QuotedHoursRouteImport } from './routes/quoted-hours'
 import { Route as TimelinessConfigurationRouteImport } from './routes/timeliness-configuration'
 import { Route as ToolAssignedLogRouteImport } from './routes/tool-assigned-log'
 import { Route as ToolStockWithdrawalLogRouteImport } from './routes/tool-stock-withdrawal-log'
 import { Route as ToolTypesRouteImport } from './routes/tool-types'
 import { Route as ToolsOrderLogRouteImport } from './routes/tools-order-log'
 import { Route as UsersRouteImport } from './routes/users'
+import { Route as JobJobIdRouteImport } from './routes/job_.$jobId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -53,6 +60,11 @@ const FillAmountRoute = FillAmountRouteImport.update({
   path: '/fill-amount',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InspectionsRoute = InspectionsRouteImport.update({
+  id: '/inspections',
+  path: '/inspections',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InstallAppRoute = InstallAppRouteImport.update({
   id: '/install-app',
   path: '/install-app',
@@ -61,6 +73,16 @@ const InstallAppRoute = InstallAppRouteImport.update({
 const InventoryItemsRoute = InventoryItemsRouteImport.update({
   id: '/inventory-items',
   path: '/inventory-items',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JobRoute = JobRouteImport.update({
+  id: '/job',
+  path: '/job',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JobsNewRoute = JobsNewRouteImport.update({
+  id: '/jobs-new',
+  path: '/jobs-new',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -83,9 +105,24 @@ const MachinesRoute = MachinesRouteImport.update({
   path: '/machines',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MachiningHoursRoute = MachiningHoursRouteImport.update({
+  id: '/machining-hours',
+  path: '/machining-hours',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MiiOrderDetailsRoute = MiiOrderDetailsRouteImport.update({
+  id: '/mii-order-details',
+  path: '/mii-order-details',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MonthlyExpenseRoute = MonthlyExpenseRouteImport.update({
   id: '/monthly-expense',
   path: '/monthly-expense',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QuotedHoursRoute = QuotedHoursRouteImport.update({
+  id: '/quoted-hours',
+  path: '/quoted-hours',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TimelinessConfigurationRoute = TimelinessConfigurationRouteImport.update({
@@ -118,6 +155,11 @@ const UsersRoute = UsersRouteImport.update({
   path: '/users',
   getParentRoute: () => rootRouteImport,
 } as any)
+const JobJobIdRoute = JobJobIdRouteImport.update({
+  id: '/job_/$jobId',
+  path: '/job/$jobId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -125,19 +167,26 @@ export interface FileRoutesByFullPath {
   '/company': typeof CompanyRoute
   '/essential-report': typeof EssentialReportRoute
   '/fill-amount': typeof FillAmountRoute
+  '/inspections': typeof InspectionsRoute
   '/install-app': typeof InstallAppRoute
   '/inventory-items': typeof InventoryItemsRoute
+  '/job': typeof JobRoute
+  '/jobs-new': typeof JobsNewRoute
   '/login': typeof LoginRoute
   '/low-stock': typeof LowStockRoute
   '/machine-hours': typeof MachineHoursRoute
   '/machines': typeof MachinesRoute
+  '/machining-hours': typeof MachiningHoursRoute
+  '/mii-order-details': typeof MiiOrderDetailsRoute
   '/monthly-expense': typeof MonthlyExpenseRoute
+  '/quoted-hours': typeof QuotedHoursRoute
   '/timeliness-configuration': typeof TimelinessConfigurationRoute
   '/tool-assigned-log': typeof ToolAssignedLogRoute
   '/tool-stock-withdrawal-log': typeof ToolStockWithdrawalLogRoute
   '/tool-types': typeof ToolTypesRoute
   '/tools-order-log': typeof ToolsOrderLogRoute
   '/users': typeof UsersRoute
+  '/job/$jobId': typeof JobJobIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -145,19 +194,26 @@ export interface FileRoutesByTo {
   '/company': typeof CompanyRoute
   '/essential-report': typeof EssentialReportRoute
   '/fill-amount': typeof FillAmountRoute
+  '/inspections': typeof InspectionsRoute
   '/install-app': typeof InstallAppRoute
   '/inventory-items': typeof InventoryItemsRoute
+  '/job': typeof JobRoute
+  '/jobs-new': typeof JobsNewRoute
   '/login': typeof LoginRoute
   '/low-stock': typeof LowStockRoute
   '/machine-hours': typeof MachineHoursRoute
   '/machines': typeof MachinesRoute
+  '/machining-hours': typeof MachiningHoursRoute
+  '/mii-order-details': typeof MiiOrderDetailsRoute
   '/monthly-expense': typeof MonthlyExpenseRoute
+  '/quoted-hours': typeof QuotedHoursRoute
   '/timeliness-configuration': typeof TimelinessConfigurationRoute
   '/tool-assigned-log': typeof ToolAssignedLogRoute
   '/tool-stock-withdrawal-log': typeof ToolStockWithdrawalLogRoute
   '/tool-types': typeof ToolTypesRoute
   '/tools-order-log': typeof ToolsOrderLogRoute
   '/users': typeof UsersRoute
+  '/job/$jobId': typeof JobJobIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -166,19 +222,26 @@ export interface FileRoutesById {
   '/company': typeof CompanyRoute
   '/essential-report': typeof EssentialReportRoute
   '/fill-amount': typeof FillAmountRoute
+  '/inspections': typeof InspectionsRoute
   '/install-app': typeof InstallAppRoute
   '/inventory-items': typeof InventoryItemsRoute
+  '/job': typeof JobRoute
+  '/jobs-new': typeof JobsNewRoute
   '/login': typeof LoginRoute
   '/low-stock': typeof LowStockRoute
   '/machine-hours': typeof MachineHoursRoute
   '/machines': typeof MachinesRoute
+  '/machining-hours': typeof MachiningHoursRoute
+  '/mii-order-details': typeof MiiOrderDetailsRoute
   '/monthly-expense': typeof MonthlyExpenseRoute
+  '/quoted-hours': typeof QuotedHoursRoute
   '/timeliness-configuration': typeof TimelinessConfigurationRoute
   '/tool-assigned-log': typeof ToolAssignedLogRoute
   '/tool-stock-withdrawal-log': typeof ToolStockWithdrawalLogRoute
   '/tool-types': typeof ToolTypesRoute
   '/tools-order-log': typeof ToolsOrderLogRoute
   '/users': typeof UsersRoute
+  '/job_/$jobId': typeof JobJobIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -188,19 +251,26 @@ export interface FileRouteTypes {
     | '/company'
     | '/essential-report'
     | '/fill-amount'
+    | '/inspections'
     | '/install-app'
     | '/inventory-items'
+    | '/job'
+    | '/jobs-new'
     | '/login'
     | '/low-stock'
     | '/machine-hours'
     | '/machines'
+    | '/machining-hours'
+    | '/mii-order-details'
     | '/monthly-expense'
+    | '/quoted-hours'
     | '/timeliness-configuration'
     | '/tool-assigned-log'
     | '/tool-stock-withdrawal-log'
     | '/tool-types'
     | '/tools-order-log'
     | '/users'
+    | '/job/$jobId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -208,19 +278,26 @@ export interface FileRouteTypes {
     | '/company'
     | '/essential-report'
     | '/fill-amount'
+    | '/inspections'
     | '/install-app'
     | '/inventory-items'
+    | '/job'
+    | '/jobs-new'
     | '/login'
     | '/low-stock'
     | '/machine-hours'
     | '/machines'
+    | '/machining-hours'
+    | '/mii-order-details'
     | '/monthly-expense'
+    | '/quoted-hours'
     | '/timeliness-configuration'
     | '/tool-assigned-log'
     | '/tool-stock-withdrawal-log'
     | '/tool-types'
     | '/tools-order-log'
     | '/users'
+    | '/job/$jobId'
   id:
     | '__root__'
     | '/'
@@ -228,19 +305,26 @@ export interface FileRouteTypes {
     | '/company'
     | '/essential-report'
     | '/fill-amount'
+    | '/inspections'
     | '/install-app'
     | '/inventory-items'
+    | '/job'
+    | '/jobs-new'
     | '/login'
     | '/low-stock'
     | '/machine-hours'
     | '/machines'
+    | '/machining-hours'
+    | '/mii-order-details'
     | '/monthly-expense'
+    | '/quoted-hours'
     | '/timeliness-configuration'
     | '/tool-assigned-log'
     | '/tool-stock-withdrawal-log'
     | '/tool-types'
     | '/tools-order-log'
     | '/users'
+    | '/job_/$jobId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -249,19 +333,26 @@ export interface RootRouteChildren {
   CompanyRoute: typeof CompanyRoute
   EssentialReportRoute: typeof EssentialReportRoute
   FillAmountRoute: typeof FillAmountRoute
+  InspectionsRoute: typeof InspectionsRoute
   InstallAppRoute: typeof InstallAppRoute
   InventoryItemsRoute: typeof InventoryItemsRoute
+  JobRoute: typeof JobRoute
+  JobsNewRoute: typeof JobsNewRoute
   LoginRoute: typeof LoginRoute
   LowStockRoute: typeof LowStockRoute
   MachineHoursRoute: typeof MachineHoursRoute
   MachinesRoute: typeof MachinesRoute
+  MachiningHoursRoute: typeof MachiningHoursRoute
+  MiiOrderDetailsRoute: typeof MiiOrderDetailsRoute
   MonthlyExpenseRoute: typeof MonthlyExpenseRoute
+  QuotedHoursRoute: typeof QuotedHoursRoute
   TimelinessConfigurationRoute: typeof TimelinessConfigurationRoute
   ToolAssignedLogRoute: typeof ToolAssignedLogRoute
   ToolStockWithdrawalLogRoute: typeof ToolStockWithdrawalLogRoute
   ToolTypesRoute: typeof ToolTypesRoute
   ToolsOrderLogRoute: typeof ToolsOrderLogRoute
   UsersRoute: typeof UsersRoute
+  JobJobIdRoute: typeof JobJobIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -301,6 +392,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FillAmountRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/inspections': {
+      id: '/inspections'
+      path: '/inspections'
+      fullPath: '/inspections'
+      preLoaderRoute: typeof InspectionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/install-app': {
       id: '/install-app'
       path: '/install-app'
@@ -313,6 +411,20 @@ declare module '@tanstack/react-router' {
       path: '/inventory-items'
       fullPath: '/inventory-items'
       preLoaderRoute: typeof InventoryItemsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/job': {
+      id: '/job'
+      path: '/job'
+      fullPath: '/job'
+      preLoaderRoute: typeof JobRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/jobs-new': {
+      id: '/jobs-new'
+      path: '/jobs-new'
+      fullPath: '/jobs-new'
+      preLoaderRoute: typeof JobsNewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -343,11 +455,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MachinesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/machining-hours': {
+      id: '/machining-hours'
+      path: '/machining-hours'
+      fullPath: '/machining-hours'
+      preLoaderRoute: typeof MachiningHoursRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mii-order-details': {
+      id: '/mii-order-details'
+      path: '/mii-order-details'
+      fullPath: '/mii-order-details'
+      preLoaderRoute: typeof MiiOrderDetailsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/monthly-expense': {
       id: '/monthly-expense'
       path: '/monthly-expense'
       fullPath: '/monthly-expense'
       preLoaderRoute: typeof MonthlyExpenseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/quoted-hours': {
+      id: '/quoted-hours'
+      path: '/quoted-hours'
+      fullPath: '/quoted-hours'
+      preLoaderRoute: typeof QuotedHoursRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/timeliness-configuration': {
@@ -392,6 +525,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UsersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/job_/$jobId': {
+      id: '/job_/$jobId'
+      path: '/job/$jobId'
+      fullPath: '/job/$jobId'
+      preLoaderRoute: typeof JobJobIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -401,19 +541,26 @@ const rootRouteChildren: RootRouteChildren = {
   CompanyRoute: CompanyRoute,
   EssentialReportRoute: EssentialReportRoute,
   FillAmountRoute: FillAmountRoute,
+  InspectionsRoute: InspectionsRoute,
   InstallAppRoute: InstallAppRoute,
   InventoryItemsRoute: InventoryItemsRoute,
+  JobRoute: JobRoute,
+  JobsNewRoute: JobsNewRoute,
   LoginRoute: LoginRoute,
   LowStockRoute: LowStockRoute,
   MachineHoursRoute: MachineHoursRoute,
   MachinesRoute: MachinesRoute,
+  MachiningHoursRoute: MachiningHoursRoute,
+  MiiOrderDetailsRoute: MiiOrderDetailsRoute,
   MonthlyExpenseRoute: MonthlyExpenseRoute,
+  QuotedHoursRoute: QuotedHoursRoute,
   TimelinessConfigurationRoute: TimelinessConfigurationRoute,
   ToolAssignedLogRoute: ToolAssignedLogRoute,
   ToolStockWithdrawalLogRoute: ToolStockWithdrawalLogRoute,
   ToolTypesRoute: ToolTypesRoute,
   ToolsOrderLogRoute: ToolsOrderLogRoute,
   UsersRoute: UsersRoute,
+  JobJobIdRoute: JobJobIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

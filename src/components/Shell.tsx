@@ -1,5 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
+  Briefcase,
   Building2,
   Bell,
   CalendarClock,
@@ -10,6 +11,10 @@ import {
   Cog,
   DollarSign,
   Download,
+  FileText,
+  FileCheck2,
+  FilePlus2,
+  Hourglass,
   LayoutDashboard,
   Layers,
   LogOut,
@@ -22,6 +27,7 @@ import {
   ShoppingCart,
   Sun,
   Tags,
+  Timer,
   Users,
   TriangleAlert,
 } from "lucide-react";
@@ -67,10 +73,38 @@ const navItems = [
     icon: CalendarClock,
   },
   { to: "/install-app", long: "Install App", short: "Install", icon: Download },
+  { to: "/job", long: "Job", short: "Job", icon: FileText },
+  { to: "/machining-hours", long: "Machining Hours", short: "Machining", icon: Timer },
+  { to: "/mii-order-details", long: "MII Order Details", short: "MII Orders", icon: ClipboardList },
+  { to: "/quoted-hours", long: "Quoted Hours", short: "Quotes", icon: Hourglass },
+  { to: "/inspections", long: "Inspections", short: "Inspections", icon: FileCheck2 },
+  { to: "/jobs-new", long: "Jobs New", short: "Jobs New", icon: FilePlus2 },
 ] as const;
 
 // These live inside the collapsible "Tools" group in the desktop sidebar.
-const TOOLS_GROUP_PATHS = new Set<string>(["/tool-types", "/brand", "/company", "/users", "/machines"]);
+const TOOLS_GROUP_PATHS = new Set<string>(["/tool-types", "/brand", "/users", "/machines"]);
+
+// These live inside the collapsible "Job" group in the desktop sidebar.
+const JOB_GROUP_PATHS = new Set<string>([
+  "/company",
+  "/job",
+  "/machining-hours",
+  "/mii-order-details",
+  "/quoted-hours",
+  "/inspections",
+  "/jobs-new",
+]);
+
+// Job submenu items — add future child routes here.
+const jobItems = [
+  { to: "/company", long: "Company", short: "Company", icon: Building2 },
+  { to: "/job", long: "Job", short: "Job", icon: FileText },
+  { to: "/machining-hours", long: "Machining Hours", short: "Machining", icon: Timer },
+  { to: "/mii-order-details", long: "MII Order Details", short: "MII Orders", icon: ClipboardList },
+  { to: "/quoted-hours", long: "Quoted Hours", short: "Quotes", icon: Hourglass },
+  { to: "/inspections", long: "Inspections", short: "Inspections", icon: FileCheck2 },
+  { to: "/jobs-new", long: "Jobs New", short: "Jobs New", icon: FilePlus2 },
+] as const;
 
 const mobileDockItems = [navItems[0], navItems[1], navItems[5], navItems[8]] as const;
 const mobileMoreItems = [
@@ -86,6 +120,12 @@ const mobileMoreItems = [
   navItems[13],
   navItems[14],
   navItems[15],
+  navItems[16],
+  navItems[17],
+  navItems[18],
+  navItems[19],
+  navItems[20],
+  navItems[21],
 ] as const;
 
 export function Shell({
@@ -102,17 +142,24 @@ export function Shell({
   const [isNight, setIsNight] = useState(false);
   const [isMenuExpanded, setIsMenuExpanded] = useState(true);
   const [isToolsGroupOpen, setIsToolsGroupOpen] = useState(false);
+  const [isJobGroupOpen, setIsJobGroupOpen] = useState(false);
   const { notifications } = useStore();
   const { user, signOut } = useAuth();
   const push = usePushNotifications();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const isMoreActive = mobileMoreItems.some((item) => pathname === item.to);
   const isToolsGroupActive = TOOLS_GROUP_PATHS.has(pathname);
+  // "/job/<id>" is the job details page.
+  const isJobGroupActive = JOB_GROUP_PATHS.has(pathname) || pathname.startsWith("/job/");
   const unreadCount = notifications.filter((notification) => !notification.read).length;
 
   useEffect(() => {
     if (isToolsGroupActive) setIsToolsGroupOpen(true);
   }, [isToolsGroupActive]);
+
+  useEffect(() => {
+    if (isJobGroupActive) setIsJobGroupOpen(true);
+  }, [isJobGroupActive]);
 
   const formatNotificationTime = (value: string) => {
     const date = new Date(value);
@@ -229,6 +276,9 @@ export function Shell({
                     );
                   }
 
+                  // Skip items that belong to the Job group — rendered separately below
+                  if (JOB_GROUP_PATHS.has(item.to)) return null;
+
                   const Icon = item.icon;
                   return (
                     <Link
@@ -248,7 +298,51 @@ export function Shell({
                   );
                 });
               })()}
+
+              {/* Job collapsible group */}
+              <div className="flex flex-col gap-1">
+                <button
+                  type="button"
+                  onClick={() => setIsJobGroupOpen((v) => !v)}
+                  className={`flex min-w-0 flex-none flex-row items-center rounded-xl border border-transparent py-2.5 text-sm font-medium transition hover:border-glass-border hover:bg-panel/70 hover:text-ink ${isMenuExpanded ? "justify-start gap-3 px-3 text-left" : "justify-center px-2"} ${isJobGroupActive ? "text-ink" : "text-muted-fg"}`}
+                  title={!isMenuExpanded ? "Job" : undefined}
+                >
+                  <Briefcase className="size-4 shrink-0" strokeWidth={1.9} aria-hidden="true" />
+                  {isMenuExpanded && (
+                    <>
+                      <span className="flex-1">Job</span>
+                      <ChevronDown
+                        className={`size-3.5 shrink-0 transition-transform ${isJobGroupOpen ? "rotate-180" : ""}`}
+                        aria-hidden="true"
+                      />
+                    </>
+                  )}
+                </button>
+                {isJobGroupOpen && (
+                  <div className={`flex flex-col gap-1 ${isMenuExpanded ? "border-l border-line/60 pl-4" : ""}`}>
+                    {jobItems.map((jobItem) => {
+                      const JobIcon = jobItem.icon;
+                      return (
+                        <Link
+                          key={jobItem.to}
+                          to={jobItem.to}
+                          className={`flex min-w-0 flex-none flex-row items-center justify-center rounded-xl border border-transparent py-2 text-sm font-medium text-muted-fg transition hover:border-glass-border hover:bg-panel/70 hover:text-ink ${isMenuExpanded ? "justify-start gap-3 px-3 text-left" : "px-2"}`}
+                          activeProps={{
+                            className:
+                              "brand-gradient border-glass-border text-accent-brand-ink font-semibold shadow-lg shadow-accent-brand/30",
+                          }}
+                          title={!isMenuExpanded ? jobItem.long : undefined}
+                        >
+                          <JobIcon className="size-4 shrink-0" strokeWidth={1.9} aria-hidden="true" />
+                          <span className={isMenuExpanded ? "inline" : "hidden"}>{jobItem.long}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </nav>
+
 
             <div
               className={`mt-auto hidden border-t border-line/60 py-4 lg:block ${isMenuExpanded ? "px-5" : "px-2 text-center"}`}

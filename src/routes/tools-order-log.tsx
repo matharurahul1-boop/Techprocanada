@@ -3,7 +3,8 @@ import { FileText, Pencil, Printer, Search, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Shell, fieldClass } from "@/components/Shell";
-import { Pagination } from "@/components/Pagination";
+import { DataList } from "@/components/DataList";
+import { useConfirmDelete } from "@/components/confirm-delete";
 import { DetailSheet, EditOrderSheet, formatDate } from "@/components/edit-sheets";
 import { missingPriceRows, printMissingPricesForm } from "@/lib/missing-prices-form";
 import { removeOrder, updateOrder, useStore } from "@/lib/store";
@@ -88,9 +89,6 @@ function ToolsOrderLogPage() {
       });
   }, [amount, brand, brands, date, items, orders, quantity, tool]);
 
-  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const currentPage = Math.min(page, pageCount);
-  const visibleRows = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const hasFilters = Boolean(tool || brand || quantity || amount || date);
 
   useEffect(() => setPage(1), [amount, brand, date, quantity, tool]);
@@ -106,12 +104,65 @@ function ToolsOrderLogPage() {
   const detailRow = rows.find((row) => row.id === detailId) ?? null;
   const editOrder = orders.find((o) => o.id === editId) ?? null;
 
-  const askDelete = (row: { id: string; toolName: string }) => {
-    if (window.confirm(`Delete this order for ${row.toolName}? The item's ordered count will be reduced.`)) {
-      removeOrder(row.id);
-      setDetailId((current) => (current === row.id ? null : current));
-    }
-  };
+  const { confirmDelete, confirmDialog } = useConfirmDelete();
+  const askDelete = (row: { id: string; toolName: string }) =>
+    confirmDelete({
+      title: `Delete this order for ${row.toolName}?`,
+      description: "The item's ordered count will be reduced.",
+      onConfirm: () => {
+        removeOrder(row.id);
+        setDetailId((current) => (current === row.id ? null : current));
+      },
+    });
+
+  type LogRow = (typeof rows)[number];
+
+  const confirmSwitch = (row: LogRow) => (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={Boolean(row.confirmed)}
+      aria-label={`${row.confirmed ? "Unconfirm" : "Confirm"} order for ${row.toolName}`}
+      onClick={(event) => {
+        event.stopPropagation();
+        updateOrder(row.id, { confirmed: !row.confirmed });
+      }}
+      className={`relative h-5 w-9 rounded-full transition ${row.confirmed ? "bg-good" : "bg-line"}`}
+    >
+      <span
+        className={`absolute top-0.5 size-4 rounded-full bg-panel shadow transition-all ${row.confirmed ? "left-[18px]" : "left-0.5"}`}
+      />
+    </button>
+  );
+
+  const rowActions = (row: LogRow) => (
+    <div className="flex items-center justify-center gap-1.5">
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          setEditId(row.id);
+        }}
+        aria-label={`Edit order for ${row.toolName}`}
+        title="Edit"
+        className="grid size-8 place-items-center rounded-full bg-chip text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
+      >
+        <Pencil size={14} />
+      </button>
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          askDelete(row);
+        }}
+        aria-label={`Delete order for ${row.toolName}`}
+        title="Delete"
+        className="grid size-8 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn"
+      >
+        <Trash2 size={14} />
+      </button>
+    </div>
+  );
 
   return (
     <Shell eyebrow="Purchase history" title="Tools Order Log">
@@ -151,93 +202,110 @@ function ToolsOrderLogPage() {
             )}
           </div>
 
-          <div className="glass-surface overflow-x-auto rounded-2xl border shadow-xl shadow-accent-brand/5">
-            <div className="hidden min-w-[68rem] grid-cols-[minmax(11rem,1.4fr)_minmax(7rem,0.8fr)_5rem_6rem_5.5rem_5.5rem_minmax(7rem,0.8fr)_7.5rem_5.5rem_5.5rem] items-center gap-3 border-b border-line px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-fg xl:grid">
-              <span>Tool name</span>
-              <span>Brand</span>
-              <span className="text-right">Ordered</span>
-              <span className="text-right">Amount</span>
-              <span className="text-right">Previous</span>
-              <span className="text-right">Total</span>
-              <span>Document</span>
-              <span>Purchase date</span>
-              <span className="text-center">Confirmed</span>
-              <span className="text-center">Actions</span>
-            </div>
-
-            {visibleRows.length === 0 ? (
+          <DataList
+            rows={rows}
+            pagination={{ page, onPageChange: setPage, pageSize: PAGE_SIZE, itemLabel: "records" }}
+            rowKey={(row) => row.id}
+            breakpoint="xl"
+            minWidth="68rem"
+            onRowClick={(row) => setDetailId(row.id)}
+            empty={
               <div className="px-5 py-14 text-center">
                 <p className="text-sm font-semibold">{hasFilters ? "No matching records" : "No orders yet"}</p>
-                <p className="mt-1 text-[12px] text-muted-fg">{hasFilters ? "Try clearing or changing the filters." : "Orders saved from Inventory Items will appear here."}</p>
+                <p className="mt-1 text-[12px] text-muted-fg">
+                  {hasFilters ? "Try clearing or changing the filters." : "Orders saved from Inventory Items will appear here."}
+                </p>
               </div>
-            ) : (
-              <div className="divide-y divide-line">
-                {visibleRows.map((row) => (
-                  <article key={row.id} role="button" tabIndex={0} onClick={() => setDetailId(row.id)} onKeyDown={(event) => { if (event.target !== event.currentTarget) return; if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setDetailId(row.id); } }} className="cursor-pointer px-4 py-3.5 transition-colors hover:bg-panel/40 xl:grid xl:min-w-[68rem] xl:grid-cols-[minmax(11rem,1.4fr)_minmax(7rem,0.8fr)_5rem_6rem_5.5rem_5.5rem_minmax(7rem,0.8fr)_7.5rem_5.5rem_5.5rem] xl:items-center xl:gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold">{row.toolName}</p>
-                      <p className="mt-0.5 truncate text-[12px] text-muted-fg xl:hidden">{row.brandName}</p>
-                    </div>
-                    <span className="hidden truncate text-[12px] text-muted-fg xl:block">{row.brandName}</span>
-                    <span className="hidden text-right font-mono text-[13px] font-semibold xl:block">{row.qtyOrdered}</span>
-                    <span className="hidden text-right font-mono text-[12px] xl:block">{currency.format(row.amount)}</span>
-                    <span className="hidden text-right font-mono text-[13px] text-muted-fg xl:block">{row.previousQty}</span>
-                    <span className="hidden text-right font-mono text-[13px] font-semibold xl:block">{row.totalQty}</span>
-                    <div className="hidden min-w-0 items-center gap-1.5 xl:flex">
-                      {row.documentName ? <FileText size={14} className="shrink-0 text-accent-brand" /> : null}
-                      <span className="truncate text-[11px] text-muted-fg">{row.documentName || "—"}</span>
-                    </div>
-                    <span className="hidden font-mono text-[11px] xl:block">{formatDate(row.purchaseDate)}</span>
-                    <div className="hidden justify-center xl:flex">
-                      <button type="button" role="switch" aria-checked={Boolean(row.confirmed)} aria-label={`${row.confirmed ? "Unconfirm" : "Confirm"} order for ${row.toolName}`} onClick={(event) => { event.stopPropagation(); updateOrder(row.id, { confirmed: !row.confirmed }); }} className={`relative h-5 w-9 rounded-full transition ${row.confirmed ? "bg-good" : "bg-line"}`}>
-                        <span className={`absolute top-0.5 size-4 rounded-full bg-panel shadow transition-all ${row.confirmed ? "left-[18px]" : "left-0.5"}`} />
-                      </button>
-                    </div>
-                    <div className="hidden items-center justify-center gap-1.5 xl:flex">
-                      <button type="button" onClick={(event) => { event.stopPropagation(); setEditId(row.id); }} aria-label={`Edit order for ${row.toolName}`} title="Edit" className="grid size-8 place-items-center rounded-full bg-chip text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink">
-                        <Pencil size={14} />
-                      </button>
-                      <button type="button" onClick={(event) => { event.stopPropagation(); askDelete(row); }} aria-label={`Delete order for ${row.toolName}`} title="Delete" className="grid size-8 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-
-                    <div className="mt-2 grid grid-cols-4 gap-2 xl:hidden">
-                      <div><p className="text-[10px] uppercase text-muted-fg">Ordered</p><p className="font-mono text-[11px] font-semibold">{row.qtyOrdered}</p></div>
-                      <div><p className="text-[10px] uppercase text-muted-fg">Previous</p><p className="font-mono text-[11px]">{row.previousQty}</p></div>
-                      <div><p className="text-[10px] uppercase text-muted-fg">Total</p><p className="font-mono text-[11px] font-semibold">{row.totalQty}</p></div>
-                      <div><p className="text-[10px] uppercase text-muted-fg">Amount</p><p className="truncate font-mono text-[11px]">{currency.format(row.amount)}</p></div>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between gap-3 xl:hidden">
-                      <div className="min-w-0">
-                        <p className="font-mono text-[11px]">{formatDate(row.purchaseDate)}</p>
-                        {row.documentName && <p className="truncate text-[11px] text-muted-fg">{row.documentName}</p>}
-                      </div>
-                      <div className="flex shrink-0 items-center gap-3">
-                        <button type="button" role="switch" aria-checked={Boolean(row.confirmed)} aria-label={`${row.confirmed ? "Unconfirm" : "Confirm"} order for ${row.toolName}`} onClick={(event) => { event.stopPropagation(); updateOrder(row.id, { confirmed: !row.confirmed }); }} className={`relative h-5 w-9 rounded-full transition ${row.confirmed ? "bg-good" : "bg-line"}`}>
-                          <span className={`absolute top-0.5 size-4 rounded-full bg-panel shadow transition-all ${row.confirmed ? "left-[18px]" : "left-0.5"}`} />
-                        </button>
-                        <button type="button" onClick={(event) => { event.stopPropagation(); setEditId(row.id); }} aria-label={`Edit order for ${row.toolName}`} title="Edit" className="grid size-8 place-items-center rounded-full bg-chip text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink">
-                          <Pencil size={14} />
-                        </button>
-                        <button type="button" onClick={(event) => { event.stopPropagation(); askDelete(row); }} aria-label={`Delete order for ${row.toolName}`} title="Delete" className="grid size-8 place-items-center rounded-full text-muted-fg transition hover:bg-warn-soft hover:text-warn">
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
+            }
+            columns={[
+              {
+                header: "Tool name",
+                sortValue: (row) => row.toolName,
+                width: "minmax(11rem,1.4fr)",
+                cell: (row) => <p className="truncate text-sm font-semibold">{row.toolName}</p>,
+              },
+              {
+                header: "Brand",
+                sortValue: (row) => row.brandName,
+                width: "minmax(7rem,0.8fr)",
+                cell: (row) => <span className="block truncate text-[12px] text-muted-fg">{row.brandName}</span>,
+              },
+              {
+                header: "Ordered",
+                sortValue: (row) => row.qtyOrdered,
+                width: "5rem",
+                align: "right",
+                cell: (row) => <span className="font-mono text-[13px] font-semibold">{row.qtyOrdered}</span>,
+              },
+              {
+                header: "Amount",
+                sortValue: (row) => row.amount,
+                width: "6rem",
+                align: "right",
+                cell: (row) => <span className="font-mono text-[12px]">{currency.format(row.amount)}</span>,
+              },
+              {
+                header: "Previous",
+                sortValue: (row) => row.previousQty,
+                width: "5.5rem",
+                align: "right",
+                cell: (row) => <span className="font-mono text-[13px] text-muted-fg">{row.previousQty}</span>,
+              },
+              {
+                header: "Total",
+                sortValue: (row) => row.totalQty,
+                width: "5.5rem",
+                align: "right",
+                cell: (row) => <span className="font-mono text-[13px] font-semibold">{row.totalQty}</span>,
+              },
+              {
+                header: "Document",
+                sortValue: (row) => row.documentName,
+                width: "minmax(7rem,0.8fr)",
+                cell: (row) => (
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    {row.documentName ? <FileText size={14} className="shrink-0 text-accent-brand" /> : null}
+                    <span className="truncate text-[11px] text-muted-fg">{row.documentName || "—"}</span>
+                  </div>
+                ),
+              },
+              {
+                header: "Purchase date",
+                sortValue: (row) => row.purchaseDate,
+                width: "7.5rem",
+                cell: (row) => <span className="font-mono text-[11px]">{formatDate(row.purchaseDate)}</span>,
+              },
+              {
+                header: "Confirmed",
+                sortValue: (row) => (row.confirmed ? 1 : 0),
+                width: "5.5rem",
+                align: "center",
+                cell: (row) => <div className="flex justify-center">{confirmSwitch(row)}</div>,
+              },
+              { header: "Actions", width: "5.5rem", align: "center", cell: rowActions },
+            ]}
+            card={(row) => (
+              <>
+                <p className="truncate text-sm font-semibold">{row.toolName}</p>
+                <p className="mt-0.5 truncate text-[12px] text-muted-fg">{row.brandName}</p>
+                <div className="mt-2 grid grid-cols-4 gap-2">
+                  <div><p className="text-[10px] uppercase text-muted-fg">Ordered</p><p className="font-mono text-[11px] font-semibold">{row.qtyOrdered}</p></div>
+                  <div><p className="text-[10px] uppercase text-muted-fg">Previous</p><p className="font-mono text-[11px]">{row.previousQty}</p></div>
+                  <div><p className="text-[10px] uppercase text-muted-fg">Total</p><p className="font-mono text-[11px] font-semibold">{row.totalQty}</p></div>
+                  <div><p className="text-[10px] uppercase text-muted-fg">Amount</p><p className="truncate font-mono text-[11px]">{currency.format(row.amount)}</p></div>
+                </div>
+                <div className="mt-2 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-mono text-[11px]">{formatDate(row.purchaseDate)}</p>
+                    {row.documentName && <p className="truncate text-[11px] text-muted-fg">{row.documentName}</p>}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    {confirmSwitch(row)}
+                    {rowActions(row)}
+                  </div>
+                </div>
+              </>
             )}
-          </div>
-
-          <Pagination
-            page={currentPage}
-            pageCount={pageCount}
-            onPageChange={setPage}
-            totalCount={rows.length}
-            pageSize={PAGE_SIZE}
-            itemLabel="records"
           />
         </section>
       </div>
@@ -287,6 +355,7 @@ function ToolsOrderLogPage() {
         }
       />
       <EditOrderSheet order={editOrder} onClose={() => setEditId(null)} />
+      {confirmDialog}
     </Shell>
   );
 }
