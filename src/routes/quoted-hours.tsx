@@ -20,7 +20,12 @@ import {
 const PAGE_SIZE = 20;
 const currency = new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" });
 
-const priceOf = (quote: { jobHours: number; rate: number }) => quote.jobHours * quote.rate;
+// Price = hours x rate x quantity, as in the old system; blank unless all three are set.
+const priceOf = (quote: { jobHours: number; rate: number; quantity: number }) =>
+  quote.jobHours && quote.rate && quote.quantity
+    ? quote.jobHours * quote.rate * quote.quantity
+    : null;
+const priceText = (price: number | null) => (price === null ? "—" : currency.format(price));
 
 type Form = Omit<QuotedHourInput, "quantity" | "jobHours" | "rate"> & {
   quantity: string;
@@ -73,7 +78,7 @@ function QuotedHoursPage() {
 
   const jobNumber = (id: string) => jobs.find((j) => j.id === id)?.jobNumber || "—";
   const machineName = (id: string) => machines.find((m) => m.id === id)?.name ?? "—";
-  const totalPrice = quotedHours.reduce((sum, quote) => sum + priceOf(quote), 0);
+  const totalPrice = quotedHours.reduce((sum, quote) => sum + (priceOf(quote) ?? 0), 0);
   const formPrice = (Number(form.jobHours) || 0) * (Number(form.rate) || 0);
 
   // Drawing numbers from MII Order Details for a job (unique, non-blank).
@@ -382,6 +387,7 @@ function QuotedHoursPage() {
           </div>
 
           <DataList
+            searchable
             rows={quotedHours}
             pagination={{ page, onPageChange: setPage, pageSize: PAGE_SIZE, itemLabel: "quotes" }}
             rowKey={(quote) => quote.id}
@@ -395,6 +401,7 @@ function QuotedHoursPage() {
             columns={[
               {
                 header: "Job number",
+                filter: "select",
                 width: "6rem",
                 sortValue: (q) => jobNumber(q.jobId),
                 cell: (q) => (
@@ -420,6 +427,7 @@ function QuotedHoursPage() {
               },
               {
                 header: "Machine or service",
+                filter: "select",
                 width: "minmax(8rem,0.8fr)",
                 sortValue: (q) => machineName(q.machineId),
                 cell: (q) => <p className="truncate text-sm">{machineName(q.machineId)}</p>,
@@ -446,10 +454,10 @@ function QuotedHoursPage() {
                 header: "Price",
                 width: "7rem",
                 align: "right",
-                sortValue: priceOf,
+                sortValue: (q) => priceOf(q) ?? "",
                 cell: (q) => (
                   <span className="font-mono text-[13px] font-semibold">
-                    {currency.format(priceOf(q))}
+                    {priceText(priceOf(q))}
                   </span>
                 ),
               },
@@ -480,7 +488,7 @@ function QuotedHoursPage() {
                     </p>
                   </div>
                   <span className="shrink-0 font-mono text-sm font-semibold">
-                    {currency.format(priceOf(q))}
+                    {priceText(priceOf(q))}
                   </span>
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[11px] text-muted-fg">

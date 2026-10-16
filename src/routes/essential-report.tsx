@@ -343,6 +343,7 @@ function EssentialReportPage() {
               },
               {
                 header: "Type",
+                filter: "select",
                 sortValue: (row) => row.type,
                 width: "minmax(8rem,0.8fr)",
                 cell: (row) => <span className="block truncate text-[12px] text-muted-fg">{row.type}</span>,
@@ -363,7 +364,9 @@ function EssentialReportPage() {
               },
               {
                 header: "Status",
+                filter: "select",
                 sortValue: (row) => ["Missing", "Low", "OK"].indexOf(row.status),
+                filterValue: (row) => row.status,
                 width: "6rem",
                 align: "center",
                 cell: (row) => (

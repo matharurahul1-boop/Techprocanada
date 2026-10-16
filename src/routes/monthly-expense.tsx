@@ -134,6 +134,7 @@ function MonthlyExpensePage() {
           </div>
 
           <DataList
+            searchable
             rows={tableRows}
             pagination={{ page, onPageChange: setPage, pageSize: PAGE_SIZE, itemLabel: "months" }}
             rowKey={(m) => `${m.year}-${m.month}`}

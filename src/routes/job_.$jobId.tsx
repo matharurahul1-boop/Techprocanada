@@ -6,10 +6,13 @@ import { Shell } from "@/components/Shell";
 import { DataList } from "@/components/DataList";
 import { useConfirmDelete } from "@/components/confirm-delete";
 import { FilterBanner, searchText } from "@/components/drill-down";
+import { DocumentChip, openDocument } from "@/components/document-chip";
 import { InspectionSheet, MachiningHourSheet, OrderDetailSheet } from "@/components/job-sheets";
 import {
   getInspectionDocumentUrl,
   removeInspection,
+  removeInspectionDocuments,
+  updateInspection,
   removeMachiningHour,
   removeMiiOrderDetail,
   useStore,
@@ -18,13 +21,7 @@ import {
   type MiiOrderDetail,
 } from "@/lib/store";
 import { JOB_STATUS_COLOR, ORDER_STATUS_COLOR } from "@/lib/order-status";
-import {
-  daysLeft,
-  fileName,
-  formatDate,
-  formatDuration,
-  formatSubmitted,
-} from "@/lib/job-format";
+import { daysLeft, fileName, formatDate, formatDuration, formatSubmitted } from "@/lib/job-format";
 
 const PAGE_SIZE = 20;
 
@@ -119,14 +116,6 @@ function JobDetailPage() {
     itemLabel,
   });
 
-  const openDocument = async (path: string) => {
-    // Open the tab synchronously so the browser doesn't treat it as a popup.
-    const tab = window.open("", "_blank");
-    const url = await getInspectionDocumentUrl(path);
-    if (url && tab) tab.location.href = url;
-    else tab?.close();
-  };
-
   if (!job) {
     return (
       <Shell eyebrow="Job · Job details" title="Job details">
@@ -182,18 +171,30 @@ function JobDetailPage() {
     </span>
   );
 
+  // Each document opens on click; × deletes that file from the inspection.
   const documentLinks = (inspection: Inspection) => (
     <div className="flex flex-wrap gap-1.5">
       {inspection.documents.map((path) => (
-        <button
+        <DocumentChip
           key={path}
-          type="button"
-          onClick={() => openDocument(path)}
-          className="inline-flex max-w-[220px] items-center gap-1.5 rounded-full bg-chip px-2.5 py-1 text-[12px] text-accent-brand transition hover:bg-accent-brand hover:text-accent-brand-ink"
-        >
-          <FileText size={12} className="shrink-0" />
-          <span className="truncate">{fileName(path)}</span>
-        </button>
+          path={path}
+          onOpen={() => void openDocument(() => getInspectionDocumentUrl(path))}
+          onDelete={() =>
+            confirmDelete({
+              title: "Delete this document?",
+              description:
+                "The file is removed from the inspection. The inspection itself is kept.",
+              onConfirm: () => {
+                removeInspectionDocuments([path]);
+                updateInspection(inspection.id, {
+                  jobDetailId: inspection.jobDetailId,
+                  drawingDetailId: inspection.drawingDetailId,
+                  documents: inspection.documents.filter((p) => p !== path),
+                });
+              },
+            })
+          }
+        />
       ))}
     </div>
   );
@@ -396,6 +397,7 @@ function JobDetailPage() {
 
           {tab === "orders" && (
             <DataList<MiiOrderDetail>
+              searchable
               rows={details}
               pagination={pagination("drawings")}
               rowKey={(d) => d.id}
@@ -431,6 +433,8 @@ function JobDetailPage() {
                 },
                 {
                   header: "Order status",
+                  filter: "select",
+                  filterValue: (r) => r.orderStatus,
                   width: "9.5rem",
                   sortValue: (d) => d.orderStatus,
                   cell: orderStatusPill,
@@ -510,6 +514,7 @@ function JobDetailPage() {
 
           {tab === "inspections" && (
             <DataList<Inspection>
+              searchable
               rows={shownInspections}
               pagination={pagination("submissions")}
               rowKey={(i) => i.id}
@@ -556,6 +561,7 @@ function JobDetailPage() {
 
           {tab === "machining" && (
             <DataList<MachiningHour>
+              searchable
               rows={shownMachining}
               pagination={pagination("entries")}
               rowKey={(entry) => entry.id}
@@ -573,6 +579,7 @@ function JobDetailPage() {
                 },
                 {
                   header: "User",
+                  filter: "select",
                   width: "minmax(8rem,0.8fr)",
                   sortValue: (entry) => userName(entry.userId),
                   cell: (entry) => (
@@ -581,6 +588,7 @@ function JobDetailPage() {
                 },
                 {
                   header: "Machine",
+                  filter: "select",
                   width: "minmax(8rem,0.8fr)",
                   sortValue: (entry) => machineName(entry.machineId),
                   cell: (entry) => (

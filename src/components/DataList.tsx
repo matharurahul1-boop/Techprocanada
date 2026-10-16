@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronsUpDown, Search, X } from "lucide-react";
 
 import { Pagination } from "@/components/Pagination";
+import { fieldClass } from "@/components/Shell";
 
 export type DataListColumn<T> = {
   header: ReactNode;
@@ -12,6 +13,15 @@ export type DataListColumn<T> = {
   /** Makes the column sortable by clicking its header. */
   sortValue?: (row: T) => string | number;
   className?: string;
+  /**
+   * Adds a filter for this column above the list: "toggle" for yes/no columns
+   * (All / Yes / No), "select" for a dropdown of the column's distinct values.
+   */
+  filter?: "toggle" | "select";
+  /** Value the filter reads; defaults to `sortValue`. */
+  filterValue?: (row: T) => string | number | boolean;
+  /** Filter label when `header` isn't plain text. */
+  filterLabel?: string;
 };
 
 type Sort = { index: number; dir: "asc" | "desc" };
@@ -49,6 +59,7 @@ const compare = (a: string | number, b: string | number) =>
  * Glass list used across the console: a header row and grid columns on wide
  * screens, floating cards (rendered by `card`) below the breakpoint. Handles
  * column sorting and, when `pagination` is given, slicing rows into pages.
+ * With `searchable`, a search box filters rows on the values of every sortable column.
  */
 export function DataList<T>({
   rows,
@@ -60,6 +71,8 @@ export function DataList<T>({
   minWidth,
   onRowClick,
   pagination,
+  searchable = false,
+  onResultsChange,
 }: {
   rows: T[];
   rowKey: (row: T) => string;
@@ -70,6 +83,10 @@ export function DataList<T>({
   /** Desktop minimum width; the list scrolls horizontally below it. */
   minWidth?: string;
   onRowClick?: (row: T) => void;
+  /** Show a search box above the list. */
+  searchable?: boolean;
+  /** Told the rows left after the search and filters (all pages), whenever they change. */
+  onResultsChange?: (rows: T[]) => void;
   pagination?: {
     page: number;
     onPageChange: (page: number) => void;
@@ -81,19 +98,74 @@ export function DataList<T>({
   const [sort, setSort] = useState<Sort | null>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [fade, setFade] = useState({ left: false, right: false });
+  const [query, setQuery] = useState("");
+  // Chosen filter value per column index: "" = all; toggles use "yes" / "no".
+  const [filters, setFilters] = useState<Record<number, string>>({});
+
+  const readFilter = (column: DataListColumn<T>, row: T) =>
+    (column.filterValue ?? column.sortValue)?.(row) ?? "";
+  const filterColumns = columns
+    .map((column, index) => ({ column, index }))
+    .filter(({ column }) => column.filter);
+  const label = (column: DataListColumn<T>) =>
+    column.filterLabel ?? (typeof column.header === "string" ? column.header : "Filter");
+  const optionsFor = (column: DataListColumn<T>) =>
+    [...new Set(rows.map((row) => String(readFilter(column, row))).filter((v) => v !== ""))].sort(
+      (a, b) => compare(a, b),
+    );
+  const filtered = rows.filter((row) =>
+    filterColumns.every(({ column, index }) => {
+      const chosen = filters[index];
+      if (!chosen) return true;
+      const value = readFilter(column, row);
+      if (column.filter === "toggle") return Boolean(value && value !== "0") === (chosen === "yes");
+      return String(value) === chosen;
+    }),
+  );
+  const setFilter = (index: number, value: string) => {
+    setFilters((current) => ({ ...current, [index]: value }));
+    pagination?.onPageChange(1);
+  };
+  const activeFilters = Object.values(filters).some(Boolean);
+
+  // Search looks at every sortable column's value; each word typed must appear in the row.
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const searched =
+    words.length === 0
+      ? filtered
+      : filtered.filter((row) => {
+          const text = columns
+            .map((column) => (column.sortValue ? String(column.sortValue(row)) : ""))
+            .join(" ")
+            .toLowerCase();
+          return words.every((word) => text.includes(word));
+        });
+  // Reported by key, so a parent that stores the result doesn't loop on new array identities.
+  const resultsKey = searched.map(rowKey).join("|");
+  const latestResults = useRef(searched);
+  latestResults.current = searched;
+  useEffect(() => {
+    onResultsChange?.(latestResults.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resultsKey]);
+
+  const changeQuery = (next: string) => {
+    setQuery(next);
+    pagination?.onPageChange(1);
+  };
 
   // Sort the full list (not just the current page), then slice into pages.
   const sortValue = sort ? columns[sort.index]?.sortValue : undefined;
   const sorted =
     sort && sortValue
-      ? [...rows].sort((a, b) => {
+      ? [...searched].sort((a, b) => {
           const va = sortValue(a);
           const vb = sortValue(b);
           // Blank values always sink to the bottom.
           if (va === "" || vb === "") return va === vb ? 0 : va === "" ? 1 : -1;
           return sort.dir === "asc" ? compare(va, vb) : compare(vb, va);
         })
-      : rows;
+      : searched;
 
   const pageSize = pagination?.pageSize ?? Math.max(sorted.length, 1);
   const pageCount = Math.max(1, Math.ceil(sorted.length / pageSize));
@@ -138,6 +210,65 @@ export function DataList<T>({
 
   return (
     <>
+      {/* Same look as the Tools Order Log filter bar: one glass panel holding the search
+          field and every filter as a full-size field, with an × to clear them all. */}
+      {(searchable || filterColumns.length > 0) && (
+        <div className="glass-surface mb-3 flex flex-wrap items-center gap-2 rounded-xl border p-2">
+          {searchable && (
+            <label className="relative block min-w-[12rem] flex-[2_1_14rem]">
+              <span className="sr-only">Search this table</span>
+              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-fg" />
+              <input
+                aria-label="Search this table"
+                value={query}
+                onChange={(event) => changeQuery(event.target.value)}
+                placeholder="Search"
+                className={`${fieldClass} pl-9`}
+              />
+            </label>
+          )}
+          {filterColumns.map(({ column, index }) => (
+            <select
+              key={index}
+              aria-label={`Filter by ${label(column)}`}
+              value={filters[index] ?? ""}
+              onChange={(event) => setFilter(index, event.target.value)}
+              className={`${fieldClass} min-w-[8rem] flex-[1_1_9rem] ${filters[index] ? "font-semibold text-ink" : "text-muted-fg"}`}
+            >
+              {column.filter === "toggle" ? (
+                <>
+                  <option value="">{label(column)}: All</option>
+                  <option value="yes">{label(column)}: Yes</option>
+                  <option value="no">{label(column)}: No</option>
+                </>
+              ) : (
+                <>
+                  <option value="">{label(column)}</option>
+                  {optionsFor(column).map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </>
+              )}
+            </select>
+          ))}
+          {(activeFilters || query) && (
+            <button
+              type="button"
+              onClick={() => {
+                setFilters({});
+                changeQuery("");
+              }}
+              aria-label="Clear filters"
+              title="Clear filters"
+              className="grid size-10 place-items-center self-center rounded-lg text-muted-fg transition hover:bg-chip hover:text-ink"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+      )}
       <div
         style={style}
         className="glass-surface relative overflow-hidden rounded-2xl border shadow-xl shadow-accent-brand/5"
@@ -182,7 +313,13 @@ export function DataList<T>({
             </div>
 
             {visible.length === 0 ? (
-              empty
+              (words.length > 0 || activeFilters) && rows.length > 0 ? (
+                <p className="px-4 py-8 text-center text-sm text-muted-fg">
+                  Nothing matches the search or filters.
+                </p>
+              ) : (
+                empty
+              )
             ) : (
               <div className={bp.list}>
                 {visible.map((row) => (

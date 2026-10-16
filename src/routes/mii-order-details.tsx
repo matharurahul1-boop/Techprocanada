@@ -285,6 +285,7 @@ function MiiOrderDetailsPage() {
           )}
 
           <DataList
+            searchable
             rows={rows}
             pagination={{ page, onPageChange: setPage, pageSize: PAGE_SIZE, itemLabel: "drawings" }}
             rowKey={(detail) => detail.id}
@@ -298,6 +299,7 @@ function MiiOrderDetailsPage() {
             columns={[
               {
                 header: "Job number",
+                filter: "select",
                 width: "minmax(5rem,5fr)",
                 sortValue: (d) => jobNumber(d.jobId),
                 cell: (d) => <span className="font-mono text-[12px]">{jobNumber(d.jobId)}</span>,
@@ -330,6 +332,8 @@ function MiiOrderDetailsPage() {
               },
               {
                 header: "Order status",
+                filter: "select",
+                filterValue: (r) => r.orderStatus,
                 width: "minmax(8rem,8fr)",
                 sortValue: (d) => MII_ORDER_STATUSES.indexOf(d.orderStatus),
                 cell: statusPill,
@@ -337,6 +341,8 @@ function MiiOrderDetailsPage() {
               {
                 // Switch with its date below; sorts by the date.
                 header: "Completed",
+                filter: "toggle",
+                filterValue: (r) => r.completed,
                 width: "minmax(5.5rem,5.5fr)",
                 sortValue: (d) => d.completedDate,
                 cell: (d) => (
@@ -348,6 +354,7 @@ function MiiOrderDetailsPage() {
               },
               {
                 header: "Inspected",
+                filter: "toggle",
                 width: "minmax(4.5rem,4.5fr)",
                 sortValue: (d) => (d.inspected ? 1 : 0),
                 cell: (d) => toggleInRow(d, "inspected"),
@@ -355,6 +362,8 @@ function MiiOrderDetailsPage() {
               {
                 // Switch with its date below; sorts by the date.
                 header: "Shipment",
+                filter: "toggle",
+                filterValue: (r) => r.shipment,
                 width: "minmax(5.5rem,5.5fr)",
                 sortValue: (d) => d.shipmentDate,
                 cell: (d) => (
@@ -380,13 +389,13 @@ function MiiOrderDetailsPage() {
                   const variance = varianceOf(d.quotedMinutes, d.actualMinutes);
                   return (
                     <div className="font-mono text-[12px] leading-tight">
-                      <p title="Quoted → actual">
+                      <p title="Quoted → actual (sum of machining hours)">
                         {formatDuration(d.quotedMinutes)} <span className="text-muted-fg">→</span>{" "}
                         {formatDuration(d.actualMinutes)}
                       </p>
                       <p
                         className={`font-semibold ${varianceTone(variance)}`}
-                        title="Variance (actual − quoted)"
+                        title="Variance (quoted − actual)"
                       >
                         {formatVariance(variance)}
                       </p>

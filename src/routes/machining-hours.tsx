@@ -209,6 +209,7 @@ function MachiningHoursPage() {
           )}
 
           <DataList
+            searchable
             rows={rows}
             pagination={{ page, onPageChange: setPage, pageSize: PAGE_SIZE, itemLabel: "entries" }}
             rowKey={(entry) => entry.id}
@@ -223,11 +224,14 @@ function MachiningHoursPage() {
                 width: "7rem",
                 sortValue: (entry) => entry.date,
                 cell: (entry) => (
-                  <span className="font-mono text-[12px] text-muted-fg">{formatDate(entry.date)}</span>
+                  <span className="font-mono text-[12px] text-muted-fg">
+                    {formatDate(entry.date)}
+                  </span>
                 ),
               },
               {
                 header: "User",
+                filter: "select",
                 width: "minmax(8rem,0.8fr)",
                 sortValue: (entry) => userName(entry.userId),
                 cell: (entry) => (
@@ -236,6 +240,7 @@ function MachiningHoursPage() {
               },
               {
                 header: "Machine",
+                filter: "select",
                 width: "minmax(8rem,0.8fr)",
                 sortValue: (entry) => machineName(entry.machineId),
                 cell: (entry) => (
@@ -253,6 +258,7 @@ function MachiningHoursPage() {
               },
               {
                 header: "Job number",
+                filter: "select",
                 width: "7rem",
                 sortValue: (entry) => jobNumber(entry.jobId),
                 cell: (entry) => (

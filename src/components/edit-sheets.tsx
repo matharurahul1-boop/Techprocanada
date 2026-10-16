@@ -10,6 +10,9 @@ import {
   type MachineHour,
   type ToolAssignment,
   type ToolOrder,
+  isStoredDocument,
+  removeOrderDocuments,
+  uploadOrderDocument,
 } from "@/lib/store";
 
 const submitClass =
@@ -164,6 +167,8 @@ export function EditOrderSheet({
 }) {
   const { brands, items } = useStore();
   const [form, setForm] = useState({ purchaseDate: "", brandId: "", qty: "", amount: "", documentName: "" });
+  // A newly picked document, uploaded on save; it replaces the order's stored one.
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (!order) return;
@@ -171,20 +176,33 @@ export function EditOrderSheet({
       purchaseDate: order.purchaseDate,
       brandId: order.brandId,
       qty: String(order.qtyOrdered),
-      amount: String(order.amount),
+      // The order stores the total; the form edits the price of one unit.
+      amount:
+        order.qtyOrdered > 0
+          ? String(Math.round((order.amount / order.qtyOrdered) * 100) / 100)
+          : String(order.amount),
       documentName: order.documentName,
     });
+    setDocumentFile(null);
   }, [order]);
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!order || !form.purchaseDate) return;
+    let documentName = form.documentName;
+    if (documentFile) {
+      const storedPath = await uploadOrderDocument(documentFile);
+      if (storedPath) {
+        if (isStoredDocument(order.documentName)) removeOrderDocuments([order.documentName]);
+        documentName = storedPath;
+      }
+    }
     updateOrder(order.id, {
       purchaseDate: form.purchaseDate,
       brandId: form.brandId,
       qtyOrdered: Number(form.qty) || 0,
-      amount: Number(form.amount) || 0,
-      documentName: form.documentName,
+      amount: Math.round((Number(form.qty) || 0) * (Number(form.amount) || 0) * 100) / 100,
+      documentName,
     });
     onClose();
   };
@@ -234,7 +252,7 @@ export function EditOrderSheet({
           </div>
           <div>
             <label className={labelClass} htmlFor="edit-order-amount">
-              Amount
+              Unit price
             </label>
             <input
               id="edit-order-amount"
@@ -248,6 +266,12 @@ export function EditOrderSheet({
             />
           </div>
         </div>
+          <p className="-mt-2 mb-4 text-[11px] text-muted-fg">
+            Total (unit price × qty):{" "}
+            <span className="font-mono font-semibold text-ink">
+              {(Math.round((Number(form.qty) || 0) * (Number(form.amount) || 0) * 100) / 100).toFixed(2)}
+            </span>
+          </p>
         <label className={labelClass} htmlFor="edit-order-doc">
           Document
         </label>
@@ -255,12 +279,16 @@ export function EditOrderSheet({
           id="edit-order-doc"
           type="file"
           onChange={(e) =>
-            setForm((f) => ({ ...f, documentName: e.target.files?.[0]?.name ?? f.documentName }))
+            setDocumentFile(e.target.files?.[0] ?? null)
           }
           className="mb-1 w-full rounded-xl bg-panel px-3 py-2.5 text-sm ring-1 ring-line file:mr-3 file:rounded-lg file:border-0 file:bg-chip file:px-3 file:py-1.5 file:text-[12px] file:font-semibold"
         />
         <p className="mb-5 text-[11px] text-muted-fg">
-          {form.documentName ? `Current: ${form.documentName}` : "PDF, image or invoice file"}
+          {documentFile
+            ? `Selected: ${documentFile.name}`
+            : form.documentName
+              ? `Current: ${form.documentName.split("/").pop()} - choosing a file replaces it`
+              : "PDF, image or invoice file"}
         </p>
         <button type="submit" className={submitClass}>
           Save changes

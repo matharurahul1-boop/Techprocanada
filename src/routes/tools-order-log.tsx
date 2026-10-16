@@ -7,7 +7,15 @@ import { DataList } from "@/components/DataList";
 import { useConfirmDelete } from "@/components/confirm-delete";
 import { DetailSheet, EditOrderSheet, formatDate } from "@/components/edit-sheets";
 import { missingPriceRows, printMissingPricesForm } from "@/lib/missing-prices-form";
-import { removeOrder, updateOrder, useStore } from "@/lib/store";
+import {
+  getOrderDocumentUrl,
+  isStoredDocument,
+  removeOrder,
+  removeOrderDocuments,
+  updateOrder,
+  useStore,
+} from "@/lib/store";
+import { DocumentChip, openDocument } from "@/components/document-chip";
 
 const PAGE_SIZE = 15;
 const currency = new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" });
@@ -105,6 +113,28 @@ function ToolsOrderLogPage() {
   const editOrder = orders.find((o) => o.id === editId) ?? null;
 
   const { confirmDelete, confirmDialog } = useConfirmDelete();
+  // The order document: click to open it, × to delete the file and clear it from the order.
+  const documentChip = (row: { id: string; documentName: string }) => (
+    <DocumentChip
+      path={row.documentName}
+      onOpen={
+        isStoredDocument(row.documentName)
+          ? () => void openDocument(() => getOrderDocumentUrl(row.documentName))
+          : undefined
+      }
+      onDelete={() =>
+        confirmDelete({
+          title: "Delete this document?",
+          description: "The file is removed from the order. The order itself is kept.",
+          onConfirm: () => {
+            if (isStoredDocument(row.documentName)) removeOrderDocuments([row.documentName]);
+            updateOrder(row.id, { documentName: "" });
+          },
+        })
+      }
+    />
+  );
+
   const askDelete = (row: { id: string; toolName: string }) =>
     confirmDelete({
       title: `Delete this order for ${row.toolName}?`,
@@ -164,6 +194,15 @@ function ToolsOrderLogPage() {
     </div>
   );
 
+  // Missing prices follow what the table shows: its own filters, search and dropdowns.
+  const [shownIds, setShownIds] = useState<Set<string> | null>(null);
+  const missingPrices = missingPriceRows(
+    shownIds ? orders.filter((order) => shownIds.has(order.id)) : orders,
+    items,
+    brands,
+    toolTypes,
+  );
+
   return (
     <Shell eyebrow="Purchase history" title="Tools Order Log">
       <div className="animate-rise px-5 py-6 lg:px-8 lg:py-8">
@@ -173,11 +212,11 @@ function ToolsOrderLogPage() {
             <div className="flex items-center gap-3">
               <button
               type="button"
-              onClick={() => printMissingPricesForm(missingPriceRows(orders, items, brands, toolTypes))}
+              onClick={() => printMissingPricesForm(missingPrices)}
               className="inline-flex h-9 items-center gap-2 rounded-xl bg-chip px-3 text-[12px] font-semibold text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
               title="Print a form listing every tool whose orders have no price"
             >
-              <Printer size={14} /> Missing prices form ({missingPriceRows(orders, items, brands, toolTypes).length})
+              <Printer size={14} /> Missing prices form ({missingPrices.length})
             </button>
               <span className="font-mono text-[12px] text-muted-fg">
                 {rows.length} of {orders.length} records
@@ -203,6 +242,7 @@ function ToolsOrderLogPage() {
           </div>
 
           <DataList
+            onResultsChange={(shown) => setShownIds(new Set(shown.map((row) => row.id)))}
             rows={rows}
             pagination={{ page, onPageChange: setPage, pageSize: PAGE_SIZE, itemLabel: "records" }}
             rowKey={(row) => row.id}
@@ -226,6 +266,7 @@ function ToolsOrderLogPage() {
               },
               {
                 header: "Brand",
+                filter: "select",
                 sortValue: (row) => row.brandName,
                 width: "minmax(7rem,0.8fr)",
                 cell: (row) => <span className="block truncate text-[12px] text-muted-fg">{row.brandName}</span>,
@@ -238,7 +279,18 @@ function ToolsOrderLogPage() {
                 cell: (row) => <span className="font-mono text-[13px] font-semibold">{row.qtyOrdered}</span>,
               },
               {
-                header: "Amount",
+                header: "Unit price",
+                sortValue: (row) => (row.qtyOrdered > 0 ? row.amount / row.qtyOrdered : row.amount),
+                width: "6rem",
+                align: "right",
+                cell: (row) => (
+                  <span className="font-mono text-[12px] text-muted-fg">
+                    {currency.format(row.qtyOrdered > 0 ? row.amount / row.qtyOrdered : row.amount)}
+                  </span>
+                ),
+              },
+              {
+                header: "Total",
                 sortValue: (row) => row.amount,
                 width: "6rem",
                 align: "right",
@@ -264,8 +316,7 @@ function ToolsOrderLogPage() {
                 width: "minmax(7rem,0.8fr)",
                 cell: (row) => (
                   <div className="flex min-w-0 items-center gap-1.5">
-                    {row.documentName ? <FileText size={14} className="shrink-0 text-accent-brand" /> : null}
-                    <span className="truncate text-[11px] text-muted-fg">{row.documentName || "—"}</span>
+                    {row.documentName ? documentChip(row) : <span className="text-[11px] text-muted-fg">—</span>}
                   </div>
                 ),
               },
@@ -277,6 +328,7 @@ function ToolsOrderLogPage() {
               },
               {
                 header: "Confirmed",
+                filter: "toggle", filterValue: (r) => Boolean(r.confirmed),
                 sortValue: (row) => (row.confirmed ? 1 : 0),
                 width: "5.5rem",
                 align: "center",
@@ -297,7 +349,7 @@ function ToolsOrderLogPage() {
                 <div className="mt-2 flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-mono text-[11px]">{formatDate(row.purchaseDate)}</p>
-                    {row.documentName && <p className="truncate text-[11px] text-muted-fg">{row.documentName}</p>}
+                    {row.documentName && <div className="mt-1">{documentChip(row)}</div>}
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
                     {confirmSwitch(row)}
@@ -325,7 +377,7 @@ function ToolsOrderLogPage() {
                 ["Amount", currency.format(detailRow.amount)],
                 ["Previous qty", String(detailRow.previousQty)],
                 ["Total qty", String(detailRow.totalQty)],
-                ["Document", detailRow.documentName],
+                ["Document", detailRow.documentName.split("/").pop() ?? ""],
                 ["Confirmed", detailRow.confirmed ? "Yes" : "No"],
               ]
             : []

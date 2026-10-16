@@ -15,9 +15,12 @@ export const parseDuration = (value: string): number | null => {
 export const formatDuration = (minutes: number | null) =>
   minutes === null ? "—" : `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")}`;
 
-/** Actual − quoted. Null when either is missing. */
+/**
+ * Quoted − actual, as the old system worked it out: positive = still within the quote,
+ * negative = over it. A missing side counts as 0; null when neither is set.
+ */
 export const varianceOf = (quoted: number | null, actual: number | null) =>
-  quoted === null || actual === null ? null : actual - quoted;
+  quoted == null && actual == null ? null : (quoted ?? 0) - (actual ?? 0);
 
 export const formatVariance = (variance: number | null) =>
   variance === null
@@ -28,16 +31,36 @@ export const varianceTone = (variance: number | null) =>
   variance === null || variance === 0
     ? "text-muted-fg"
     : variance > 0
-      ? "text-destructive"
-      : "text-good";
+      ? "text-good"
+      : "text-destructive";
 
 // ── Dates and files ─────────────────────────────────────────────────────────
 
-export const today = () => new Date().toISOString().slice(0, 10);
+/** Today's date (local time) as YYYY-MM-DD. */
+export const today = () => {
+  const now = new Date();
+  const two = (n: number) => String(n).padStart(2, "0");
+  return `${now.getFullYear()}-${two(now.getMonth() + 1)}-${two(now.getDate())}`;
+};
 
-/** Due date minus date, in whole days. Null when either date is missing. */
-export const daysLeft = (date: string, dueDate: string) =>
-  date && dueDate ? Math.round((Date.parse(dueDate) - Date.parse(date)) / 86_400_000) : null;
+/**
+ * Days left / behind, as the old system worked it out: counted from today to the due
+ * date (positive = days left, negative = days behind, 0 on the due date), and 0 until
+ * the job's start date. Null when either date is missing.
+ */
+export const daysLeft = (date: string, dueDate: string) => {
+  if (!date || !dueDate) return null;
+  const now = today();
+  if (now < date) return 0;
+  return Math.round((Date.parse(dueDate) - Date.parse(now)) / 86_400_000);
+};
+
+/** USD to CAD rate the old system used for a job's PO amount. */
+export const USD_TO_CAD = 1.37;
+
+/** PO amount in CAD: the amount itself, or converted when it is in USD (currency 2). */
+export const poAmountFor = (amount: number | null, currency: number | null) =>
+  amount === null ? null : currency === 2 ? Math.round(amount * USD_TO_CAD * 100) / 100 : amount;
 
 /** "2026-10-13" → "13/10/2026" (day/month/year, used in every table); "—" when blank. */
 export const formatDate = (value: string | null | undefined) => {

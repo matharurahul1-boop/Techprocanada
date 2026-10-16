@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { Shell, fieldClass, labelClass } from "@/components/Shell";
+import { SearchBox, matchesSearch } from "@/components/SearchBox";
 import { useConfirmDelete } from "@/components/confirm-delete";
 import { AddButton, Sheet } from "@/components/Sheet";
 import { Pagination } from "@/components/Pagination";
@@ -37,10 +38,12 @@ function MachinesPage() {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [query, setQuery] = useState("");
+  const shown = machines.filter((row) => matchesSearch(query, ((m) => m.name)(row)));
 
-  const pageCount = Math.max(1, Math.ceil(machines.length / PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
-  const visibleMachines = machines.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const visibleMachines = shown.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const openNew = () => {
     setEditId(null);
@@ -99,6 +102,14 @@ function MachinesPage() {
 
       <div className="animate-rise px-5 py-6 lg:px-8 lg:py-8">
         <section className="min-w-0">
+          <SearchBox
+            value={query}
+            onChange={(value) => {
+              setQuery(value);
+              setPage(1);
+            }}
+            placeholder="Search machines…"
+          />
           <div className="mb-3 flex items-center justify-between px-1">
             <h2 className="font-display text-base font-semibold">Machines</h2>
             <span className="font-mono text-[12px] text-muted-fg">{machines.length} machines</span>
@@ -152,7 +163,7 @@ function MachinesPage() {
             page={currentPage}
             pageCount={pageCount}
             onPageChange={setPage}
-            totalCount={machines.length}
+            totalCount={shown.length}
             pageSize={PAGE_SIZE}
             itemLabel="machines"
           />

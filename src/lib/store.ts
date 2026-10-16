@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesUpdate } from "@/integrations/supabase/types";
 import { notifyLowStock } from "@/lib/push/actions.functions";
-import { daysLeft as daysBetween } from "@/lib/job-format";
+import { daysLeft as daysBetween, poAmountFor, today as todayDate } from "@/lib/job-format";
 
 export type ToolType = { id: string; name: string };
 
@@ -283,7 +283,42 @@ let hydrated = false;
 const listeners = new Set<() => void>();
 
 function emit() {
+  state = withActualHours(state);
   listeners.forEach((l) => l());
+}
+
+/** Machining minutes logged against a job and drawing number; null when none are. */
+export function actualMinutesFor(
+  jobId: string,
+  drawingNumber: string,
+  entries: MachiningHour[] = state.machiningHours,
+): number | null {
+  let total: number | null = null;
+  for (const entry of entries) {
+    if (entry.jobId !== jobId || entry.drawingNumber !== drawingNumber) continue;
+    if (entry.durationMinutes == null) continue;
+    total = (total ?? 0) + entry.durationMinutes;
+  }
+  return total;
+}
+
+// Old-system rule: a drawing's actual hours are the sum of the machining hours logged
+// against its job and drawing number. Recomputed on every change, so it is never typed in.
+function withActualHours(current: State): State {
+  const totals = new Map<string, number>();
+  for (const entry of current.machiningHours) {
+    if (!entry.jobId || !entry.drawingNumber || entry.durationMinutes == null) continue;
+    const key = `${entry.jobId}|${entry.drawingNumber}`;
+    totals.set(key, (totals.get(key) ?? 0) + entry.durationMinutes);
+  }
+  let changed = false;
+  const details = current.miiOrderDetails.map((detail) => {
+    const total = totals.get(`${detail.jobId}|${detail.drawingNumber}`) ?? null;
+    if (total === detail.actualMinutes) return detail;
+    changed = true;
+    return { ...detail, actualMinutes: total };
+  });
+  return changed ? { ...current, miiOrderDetails: details } : current;
 }
 
 function persist() {
@@ -1040,7 +1075,10 @@ const INSPECTION_DOCS_BUCKET = "inspection-documents";
 async function uploadToBucket(bucket: string, file: File): Promise<string | null> {
   // A folder per upload keeps the original file name without collisions.
   const path = `${crypto.randomUUID()}/${file.name}`;
-  const { error } = await supabase.storage.from(bucket).upload(path, file);
+  // The file type is stored with it so the browser can show it instead of downloading it.
+  const { error } = await supabase.storage
+    .from(bucket)
+    .upload(path, file, file.type ? { contentType: file.type } : {});
   if (error) {
     reportError(`Upload ${file.name}`, error);
     return null;
@@ -1074,6 +1112,18 @@ export const getPackingSlipUrl = (path: string) =>
 export const uploadInspectionDocument = (file: File) => uploadToBucket(INSPECTION_DOCS_BUCKET, file);
 export const removeInspectionDocuments = (paths: string[]) =>
   removeFromBucket(INSPECTION_DOCS_BUCKET, paths, "inspection document");
+const ORDER_DOCS_BUCKET = "order-documents";
+export const uploadOrderDocument = (file: File) => uploadToBucket(ORDER_DOCS_BUCKET, file);
+export const removeOrderDocuments = (paths: string[]) =>
+  removeFromBucket(ORDER_DOCS_BUCKET, paths, "order document");
+export const getOrderDocumentUrl = (path: string) =>
+  signedUrl(ORDER_DOCS_BUCKET, path, "order document");
+/**
+ * Uploaded files are stored as "<folder>/<file name>"; older orders only kept the
+ * file name, so there is nothing to open for them.
+ */
+export const isStoredDocument = (value: string) => value.includes("/");
+
 export const getInspectionDocumentUrl = (path: string) =>
   signedUrl(INSPECTION_DOCS_BUCKET, path, "inspection document");
 
@@ -1133,6 +1183,7 @@ export function addMachiningHour(entry: MachiningHourInput) {
   state = { ...state, machiningHours: [{ id: tempId, ...entry }, ...state.machiningHours] };
   persist();
   emit();
+  markWorkStarted(entry);
   void (async () => {
     const { data, error } = await supabase
       .from("machining_hours")
@@ -1152,6 +1203,7 @@ export function addMachiningHour(entry: MachiningHourInput) {
 }
 
 export function updateMachiningHour(id: string, entry: MachiningHourInput) {
+  const previous = state.machiningHours.find((m) => m.id === id);
   state = {
     ...state,
     machiningHours: state.machiningHours.map((existing) =>
@@ -1160,6 +1212,7 @@ export function updateMachiningHour(id: string, entry: MachiningHourInput) {
   };
   persist();
   emit();
+  if (previous?.durationMinutes !== entry.durationMinutes) markWorkStarted(entry);
   if (!isSavedId(id)) return;
   void supabase
     .from("machining_hours")
@@ -1181,11 +1234,13 @@ export function removeMachiningHour(id: string) {
 }
 
 /** Resolves to the saved row's id, or null when the insert failed. */
-export function addMiiOrderDetail(detail: MiiOrderDetailInput): Promise<string | null> {
+export function addMiiOrderDetail(input: MiiOrderDetailInput): Promise<string | null> {
+  const detail = applyDrawingRules(input);
   const tempId = uid();
   state = { ...state, miiOrderDetails: [{ id: tempId, ...detail }, ...state.miiOrderDetails] };
   persist();
   emit();
+  syncJobFromDrawings(detail.jobId);
   return (async () => {
     const { data, error } = await supabase
       .from("mii_order_details")
@@ -1208,7 +1263,10 @@ export function addMiiOrderDetail(detail: MiiOrderDetailInput): Promise<string |
   })();
 }
 
-export function updateMiiOrderDetail(id: string, detail: MiiOrderDetailInput) {
+/** Saves a drawing. `rules` = false skips the status rules (used when hours start work). */
+export function updateMiiOrderDetail(id: string, input: MiiOrderDetailInput, rules = true) {
+  const detail = rules ? applyDrawingRules(input) : input;
+  const previousJobId = state.miiOrderDetails.find((d) => d.id === id)?.jobId;
   state = {
     ...state,
     miiOrderDetails: state.miiOrderDetails.map((existing) =>
@@ -1217,6 +1275,8 @@ export function updateMiiOrderDetail(id: string, detail: MiiOrderDetailInput) {
   };
   persist();
   emit();
+  syncJobFromDrawings(detail.jobId);
+  if (previousJobId && previousJobId !== detail.jobId) syncJobFromDrawings(previousJobId);
   if (!isSavedId(id)) return;
   void supabase
     .from("mii_order_details")
@@ -1226,9 +1286,11 @@ export function updateMiiOrderDetail(id: string, detail: MiiOrderDetailInput) {
 }
 
 export function removeMiiOrderDetail(id: string) {
+  const jobId = state.miiOrderDetails.find((d) => d.id === id)?.jobId;
   state = { ...state, miiOrderDetails: state.miiOrderDetails.filter((d) => d.id !== id) };
   persist();
   emit();
+  if (jobId) syncJobFromDrawings(jobId);
   if (!isSavedId(id)) return;
   void supabase
     .from("mii_order_details")
@@ -1350,7 +1412,8 @@ export function removeInspection(id: string) {
     .then(({ error }) => error && reportError("Remove inspection", error));
 }
 
-export function addMiiJob(job: MiiJobInput) {
+export function addMiiJob(input: MiiJobInput) {
+  const job = { ...input, poAmount: poAmountFor(input.amount, input.currency) };
   const tempId = uid();
   state = { ...state, miiJobs: [{ id: tempId, ...job }, ...state.miiJobs] };
   persist();
@@ -1371,7 +1434,8 @@ export function addMiiJob(job: MiiJobInput) {
   })();
 }
 
-export function updateMiiJob(id: string, job: MiiJobInput) {
+export function updateMiiJob(id: string, input: MiiJobInput) {
+  const job = { ...input, poAmount: poAmountFor(input.amount, input.currency) };
   state = {
     ...state,
     miiJobs: state.miiJobs.map((existing) => (existing.id === id ? { ...existing, ...job } : existing)),
@@ -1813,6 +1877,89 @@ export function clearNotifications() {
   state = { ...state, notifications: [] };
   persist();
   emit();
+}
+
+// ── Rules carried over from the old system ─────────────────────────────────
+
+/**
+ * A drawing's status follows its toggles and quantities: switching Completed on, or
+ * completing every piece, makes it Completed; a fully made drawing that is shipped
+ * becomes Shipped (with today's date if none is set).
+ */
+function applyDrawingRules(input: MiiOrderDetailInput): MiiOrderDetailInput {
+  const detail = { ...input };
+  const allMade = detail.quantity > 0 && detail.quantityCompleted === detail.quantity;
+  if (detail.completed || allMade) detail.orderStatus = "Completed";
+  if (allMade && detail.shipment) {
+    detail.orderStatus = "Shipped";
+    if (!detail.shipmentDate) detail.shipmentDate = todayDate();
+  }
+  return detail;
+}
+
+const jobInput = ({ id: _id, ...job }: Job): JobInput => job;
+
+/**
+ * A job follows its drawings: all Completed -> Completed; some Completed -> Partially
+ * Completed; all Shipped -> Shipped (ship date today if none); all In Progress, Not
+ * Started, Mistake or Requires Attention -> that status; any other mix leaves the status
+ * as it is. The item counts come from the drawings too.
+ */
+function syncJobFromDrawings(jobId: string) {
+  const job = state.jobs.find((j) => j.id === jobId);
+  if (!job) return;
+  const drawings = state.miiOrderDetails.filter((d) => d.jobId === jobId);
+  const total = drawings.length;
+  if (total === 0) return;
+  const count = (status: MiiOrderStatus) => drawings.filter((d) => d.orderStatus === status).length;
+  const all = (status: MiiOrderStatus) => count(status) === total;
+
+  let status = job.status;
+  let completedItems = 0;
+  let shipDate = job.shipDate;
+  if (all("Completed")) {
+    status = "Completed";
+    completedItems = total;
+  } else if (count("Completed") > 0) {
+    status = "Partially Completed";
+    completedItems = count("Completed");
+  } else if (all("Shipped")) {
+    status = "Shipped";
+    completedItems = total;
+    shipDate = shipDate || todayDate();
+  } else if (all("In Progress")) status = "In Progress";
+  else if (all("Not Started")) status = "Not Started";
+  else if (all("Mistake")) status = "Mistake";
+  else if (all("Requires Attention")) status = "Requires Attention";
+
+  if (
+    status === job.status &&
+    completedItems === job.completedItems &&
+    total === job.numberOfItems &&
+    shipDate === job.shipDate
+  ) {
+    return;
+  }
+  updateJob(jobId, { ...jobInput(job), status, completedItems, numberOfItems: total, shipDate });
+}
+
+/**
+ * Logging machining hours starts the work: the drawing it is for and its job both
+ * switch to In Progress.
+ */
+function markWorkStarted(entry: MachiningHourInput) {
+  if (entry.jobId && entry.drawingNumber) {
+    for (const detail of state.miiOrderDetails) {
+      if (detail.jobId !== entry.jobId || detail.drawingNumber !== entry.drawingNumber) continue;
+      if (detail.orderStatus === "In Progress") continue;
+      const { id, ...input } = detail;
+      updateMiiOrderDetail(id, { ...input, orderStatus: "In Progress" }, false);
+    }
+  }
+  const job = entry.jobId ? state.jobs.find((j) => j.id === entry.jobId) : undefined;
+  if (job && job.status !== "In Progress") {
+    updateJob(job.id, { ...jobInput(job), status: "In Progress" });
+  }
 }
 
 export const balanceOf = (i: InventoryItem) => i.ordered - i.issued;

@@ -33,6 +33,7 @@ import { Route as ToolStockWithdrawalLogRouteImport } from './routes/tool-stock-
 import { Route as ToolTypesRouteImport } from './routes/tool-types'
 import { Route as ToolsOrderLogRouteImport } from './routes/tools-order-log'
 import { Route as UsersRouteImport } from './routes/users'
+import { Route as VarianceReportRouteImport } from './routes/variance-report'
 import { Route as JobJobIdRouteImport } from './routes/job_.$jobId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -155,6 +156,11 @@ const UsersRoute = UsersRouteImport.update({
   path: '/users',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VarianceReportRoute = VarianceReportRouteImport.update({
+  id: '/variance-report',
+  path: '/variance-report',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const JobJobIdRoute = JobJobIdRouteImport.update({
   id: '/job_/$jobId',
   path: '/job/$jobId',
@@ -186,6 +192,7 @@ export interface FileRoutesByFullPath {
   '/tool-types': typeof ToolTypesRoute
   '/tools-order-log': typeof ToolsOrderLogRoute
   '/users': typeof UsersRoute
+  '/variance-report': typeof VarianceReportRoute
   '/job/$jobId': typeof JobJobIdRoute
 }
 export interface FileRoutesByTo {
@@ -213,6 +220,7 @@ export interface FileRoutesByTo {
   '/tool-types': typeof ToolTypesRoute
   '/tools-order-log': typeof ToolsOrderLogRoute
   '/users': typeof UsersRoute
+  '/variance-report': typeof VarianceReportRoute
   '/job/$jobId': typeof JobJobIdRoute
 }
 export interface FileRoutesById {
@@ -241,6 +249,7 @@ export interface FileRoutesById {
   '/tool-types': typeof ToolTypesRoute
   '/tools-order-log': typeof ToolsOrderLogRoute
   '/users': typeof UsersRoute
+  '/variance-report': typeof VarianceReportRoute
   '/job_/$jobId': typeof JobJobIdRoute
 }
 export interface FileRouteTypes {
@@ -270,6 +279,7 @@ export interface FileRouteTypes {
     | '/tool-types'
     | '/tools-order-log'
     | '/users'
+    | '/variance-report'
     | '/job/$jobId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -297,6 +307,7 @@ export interface FileRouteTypes {
     | '/tool-types'
     | '/tools-order-log'
     | '/users'
+    | '/variance-report'
     | '/job/$jobId'
   id:
     | '__root__'
@@ -324,6 +335,7 @@ export interface FileRouteTypes {
     | '/tool-types'
     | '/tools-order-log'
     | '/users'
+    | '/variance-report'
     | '/job_/$jobId'
   fileRoutesById: FileRoutesById
 }
@@ -352,6 +364,7 @@ export interface RootRouteChildren {
   ToolTypesRoute: typeof ToolTypesRoute
   ToolsOrderLogRoute: typeof ToolsOrderLogRoute
   UsersRoute: typeof UsersRoute
+  VarianceReportRoute: typeof VarianceReportRoute
   JobJobIdRoute: typeof JobJobIdRoute
 }
 
@@ -525,6 +538,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UsersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/variance-report': {
+      id: '/variance-report'
+      path: '/variance-report'
+      fullPath: '/variance-report'
+      preLoaderRoute: typeof VarianceReportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/job_/$jobId': {
       id: '/job_/$jobId'
       path: '/job/$jobId'
@@ -560,6 +580,7 @@ const rootRouteChildren: RootRouteChildren = {
   ToolTypesRoute: ToolTypesRoute,
   ToolsOrderLogRoute: ToolsOrderLogRoute,
   UsersRoute: UsersRoute,
+  VarianceReportRoute: VarianceReportRoute,
   JobJobIdRoute: JobJobIdRoute,
 }
 export const routeTree = rootRouteImport
