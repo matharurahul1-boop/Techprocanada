@@ -295,12 +295,14 @@ function MachineHoursPage() {
             columns={[
               {
                 header: "Machine",
+                filter: "select",
                 sortValue: (entry) => machineName(entry.machineId),
                 width: "minmax(0,1fr)",
                 cell: (entry) => <p className="truncate text-sm font-semibold">{machineName(entry.machineId)}</p>,
               },
               {
                 header: "Operator",
+                filter: "select",
                 sortValue: (entry) => operatorName(entry.operatorId),
                 width: "minmax(0,1fr)",
                 cell: (entry) => (

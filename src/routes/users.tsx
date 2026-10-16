@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Shell } from "@/components/Shell";
+import { SearchBox, matchesSearch } from "@/components/SearchBox";
 import { useConfirmDelete } from "@/components/confirm-delete";
 import { Pagination } from "@/components/Pagination";
 
@@ -34,15 +35,25 @@ function UsersPage() {
   const { users, assignments } = useStore();
   const { confirmDelete, confirmDialog } = useConfirmDelete();
   const [page, setPage] = useState(1);
+  const [query, setQuery] = useState("");
+  const shown = users.filter((row) => matchesSearch(query, ((u) => u.name + " " + (u.email ?? ""))(row)));
 
-  const pageCount = Math.max(1, Math.ceil(users.length / PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
-  const visibleUsers = users.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const visibleUsers = shown.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <Shell eyebrow="Users" title="Crew & recipients">
       <div className="animate-rise px-5 py-6 lg:px-8 lg:py-8">
         <section className="min-w-0">
+          <SearchBox
+            value={query}
+            onChange={(value) => {
+              setQuery(value);
+              setPage(1);
+            }}
+            placeholder="Search users…"
+          />
           <div className="mb-3 flex items-center justify-between px-1">
             <h2 className="font-display text-base font-semibold">Users</h2>
             <span className="font-mono text-[12px] text-muted-fg">{users.length} users</span>
@@ -107,7 +118,7 @@ function UsersPage() {
             page={currentPage}
             pageCount={pageCount}
             onPageChange={setPage}
-            totalCount={users.length}
+            totalCount={shown.length}
             pageSize={PAGE_SIZE}
             itemLabel="users"
           />

@@ -3,6 +3,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { Shell, fieldClass, labelClass } from "@/components/Shell";
+import { SearchBox, matchesSearch } from "@/components/SearchBox";
 import { useConfirmDelete } from "@/components/confirm-delete";
 import { AddButton, Sheet } from "@/components/Sheet";
 import { Pagination } from "@/components/Pagination";
@@ -31,10 +32,12 @@ function ToolTypesPage() {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [query, setQuery] = useState("");
+  const shown = toolTypes.filter((row) => matchesSearch(query, ((t) => t.name)(row)));
 
-  const pageCount = Math.max(1, Math.ceil(toolTypes.length / PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
-  const visibleTypes = toolTypes.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const visibleTypes = shown.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const openNew = () => {
     setEditId(null);
@@ -77,6 +80,14 @@ function ToolTypesPage() {
 
       <div className="animate-rise px-5 py-6 lg:px-8 lg:py-8">
         <section className="min-w-0">
+          <SearchBox
+            value={query}
+            onChange={(value) => {
+              setQuery(value);
+              setPage(1);
+            }}
+            placeholder="Search tool types…"
+          />
           <div className="mb-3 flex items-center justify-between px-1">
             <h2 className="font-display text-base font-semibold">Tool types</h2>
             <span className="font-mono text-[12px] text-muted-fg">{toolTypes.length} types</span>
@@ -104,7 +115,7 @@ function ToolTypesPage() {
             page={currentPage}
             pageCount={pageCount}
             onPageChange={setPage}
-            totalCount={toolTypes.length}
+            totalCount={shown.length}
             pageSize={PAGE_SIZE}
             itemLabel="types"
           />

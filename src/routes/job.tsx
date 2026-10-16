@@ -8,6 +8,7 @@ import { cellBool, cellDate, cellNumber, cellOption } from "@/lib/excel";
 import { useConfirmDelete } from "@/components/confirm-delete";
 import { AddButton } from "@/components/Sheet";
 import { JobSheet } from "@/components/job-sheets";
+import { DocumentChip, openDocument } from "@/components/document-chip";
 import { JobWheel } from "@/components/job-wheel";
 import { JobWizardSheet } from "@/components/job-wizard";
 import { DataList } from "@/components/DataList";
@@ -86,14 +87,6 @@ function JobPage() {
     setEditId(null);
   };
 
-  const openSlip = async (path: string) => {
-    // Open the tab synchronously so the browser doesn't treat it as a popup.
-    const tab = window.open("", "_blank");
-    const url = await getPackingSlipUrl(path);
-    if (url && tab) tab.location.href = url;
-    else tab?.close();
-  };
-
   const statusPill = (job: Job) => (
     <span
       className={`inline-block shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STATUS_COLOR[job.status]}`}
@@ -102,18 +95,28 @@ function JobPage() {
     </span>
   );
 
+  // Each packing slip opens on click; × deletes that file from the job.
   const slipLinks = (job: Job) => (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col items-start gap-1">
       {job.packingSlips.map((path) => (
-        <button
+        <DocumentChip
           key={path}
-          type="button"
-          onClick={() => openSlip(path)}
-          className="inline-flex max-w-[180px] items-center gap-1 text-left text-accent-brand hover:underline"
-        >
-          <FileText size={12} className="shrink-0" />
-          <span className="truncate">{fileName(path)}</span>
-        </button>
+          path={path}
+          onOpen={() => void openDocument(() => getPackingSlipUrl(path))}
+          onDelete={() =>
+            confirmDelete({
+              title: "Delete this packing slip?",
+              description: "The file is removed from the job. The job itself is kept.",
+              onConfirm: () => {
+                removePackingSlips([path]);
+                updateJob(job.id, {
+                  ...toInput(job),
+                  packingSlips: job.packingSlips.filter((p) => p !== path),
+                });
+              },
+            })
+          }
+        />
       ))}
     </div>
   );
@@ -428,7 +431,9 @@ function JobPage() {
                 sortValue: (job) => job.shipDate,
                 width: "minmax(5rem,5fr)",
                 cell: (job) => (
-                  <span className="font-mono text-[12px] text-muted-fg">{formatDate(job.shipDate)}</span>
+                  <span className="font-mono text-[12px] text-muted-fg">
+                    {formatDate(job.shipDate)}
+                  </span>
                 ),
               },
               {
@@ -443,6 +448,7 @@ function JobPage() {
               },
               {
                 header: "Priority",
+                filter: "toggle",
                 sortValue: (job) => (job.priority ? 1 : 0),
                 width: "minmax(4rem,4fr)",
                 cell: prioritySwitch,
@@ -463,7 +469,6 @@ function JobPage() {
                     </div>
                     {statusPill(job)}
                   </div>
-
 
                   <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[11px] text-muted-fg">
                     <span>Date {formatDate(job.date)}</span>

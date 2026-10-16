@@ -15,7 +15,15 @@ import {
   useOpenOnAdd,
 } from "@/components/drill-down";
 import { InspectionSheet } from "@/components/job-sheets";
-import { getInspectionDocumentUrl, removeInspection, useStore, type Inspection } from "@/lib/store";
+import {
+  getInspectionDocumentUrl,
+  removeInspection,
+  removeInspectionDocuments,
+  updateInspection,
+  useStore,
+  type Inspection,
+} from "@/lib/store";
+import { DocumentChip, openDocument } from "@/components/document-chip";
 import { fileName, formatSubmitted } from "@/lib/job-format";
 
 const PAGE_SIZE = 20;
@@ -104,26 +112,30 @@ function InspectionsPage() {
     setEditId(null);
   };
 
-  const openDocument = async (path: string) => {
-    // Open the tab synchronously so the browser doesn't treat it as a popup.
-    const tab = window.open("", "_blank");
-    const url = await getInspectionDocumentUrl(path);
-    if (url && tab) tab.location.href = url;
-    else tab?.close();
-  };
-
+  // Each document opens on click; × deletes that file from the inspection.
   const documentLinks = (inspection: Inspection) => (
     <div className="flex flex-wrap gap-1.5">
       {inspection.documents.map((path) => (
-        <button
+        <DocumentChip
           key={path}
-          type="button"
-          onClick={() => openDocument(path)}
-          className="inline-flex max-w-[220px] items-center gap-1.5 rounded-full bg-chip px-2.5 py-1 text-[12px] text-accent-brand transition hover:bg-accent-brand hover:text-accent-brand-ink"
-        >
-          <FileText size={12} className="shrink-0" />
-          <span className="truncate">{fileName(path)}</span>
-        </button>
+          path={path}
+          onOpen={() => void openDocument(() => getInspectionDocumentUrl(path))}
+          onDelete={() =>
+            confirmDelete({
+              title: "Delete this document?",
+              description:
+                "The file is removed from the inspection. The inspection itself is kept.",
+              onConfirm: () => {
+                removeInspectionDocuments([path]);
+                updateInspection(inspection.id, {
+                  jobDetailId: inspection.jobDetailId,
+                  drawingDetailId: inspection.drawingDetailId,
+                  documents: inspection.documents.filter((p) => p !== path),
+                });
+              },
+            })
+          }
+        />
       ))}
     </div>
   );
@@ -219,6 +231,7 @@ function InspectionsPage() {
           )}
 
           <DataList
+            searchable
             rows={rows}
             pagination={{
               page,
@@ -235,6 +248,7 @@ function InspectionsPage() {
             columns={[
               {
                 header: "Job number",
+                filter: "select",
                 width: "7rem",
                 sortValue: (i) => jobNumber(i),
                 cell: (i) => <span className="font-mono text-[12px]">{jobNumber(i)}</span>,

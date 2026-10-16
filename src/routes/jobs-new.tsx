@@ -21,7 +21,7 @@ import {
   type MiiJobInput,
 } from "@/lib/store";
 import { COMPANY_PRIORITY_COLOR, JOB_STATUS_COLOR } from "@/lib/order-status";
-import { daysLeft as daysBetween, formatDate } from "@/lib/job-format";
+import { daysLeft as daysBetween, formatDate, poAmountFor } from "@/lib/job-format";
 
 const PAGE_SIZE = 20;
 
@@ -114,7 +114,7 @@ function JobsNewPage() {
   const companyOf = (id: string) => companies.find((c) => c.id === id);
   const companyName = (id: string) => companyOf(id)?.name ?? "—";
 
-  // Days left / behind = due date - date (the job's start date), never typed in.
+  // Days left / behind: today to the due date (0 before the start date), never typed in.
   // Blank when either date is missing.
   const daysOf = (job: { date: string; dueDate: string }) => daysBetween(job.date, job.dueDate);
 
@@ -459,7 +459,7 @@ function JobsNewPage() {
                 {daysText(formDays)}
               </p>
               <p className="mt-1 text-[11px] text-muted-fg">
-                Due date minus date, worked out for you.
+                Counted from today to the due date; 0 before the start date.
               </p>
             </div>
             {textField(
@@ -479,13 +479,20 @@ function JobsNewPage() {
                 ...Object.entries(CURRENCIES).map(([code, name]) => ({ value: code, label: name })),
               ],
             )}
-            {textField(
-              "jn-po-amount",
-              "PO amount",
-              form.poAmount,
-              (poAmount) => setForm({ ...form, poAmount }),
-              "number",
-            )}
+            <div>
+              <p className={labelClass}>PO amount (CAD)</p>
+              <p className={`${fieldClass} flex items-center font-mono`}>
+                {moneyText(
+                  poAmountFor(
+                    optionalNumber(form.amount),
+                    form.currency ? Number(form.currency) : null,
+                  ),
+                )}
+              </p>
+              <p className="mt-1 text-[11px] text-muted-fg">
+                The amount, converted at 1.37 when it is in USD.
+              </p>
+            </div>
           </div>
 
           <label className={labelClass} htmlFor="jn-remarks">
@@ -544,6 +551,7 @@ function JobsNewPage() {
           </div>
 
           <DataList
+            searchable
             rows={miiJobs}
             pagination={{ page, onPageChange: setPage, pageSize: PAGE_SIZE, itemLabel: "jobs" }}
             rowKey={(job) => job.id}
@@ -565,6 +573,7 @@ function JobsNewPage() {
               },
               {
                 header: "Company",
+                filter: "select",
                 width: "minmax(6rem,7fr)",
                 sortValue: (j) => (j.companyId ? companyName(j.companyId) : ""),
                 cell: companyCell,
@@ -598,6 +607,8 @@ function JobsNewPage() {
               },
               {
                 header: "Status",
+                filter: "select",
+                filterValue: (r) => r.status,
                 width: "minmax(8rem,8fr)",
                 sortValue: (j) => JOB_STATUSES.indexOf(j.status),
                 cell: statusPill,

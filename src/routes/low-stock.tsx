@@ -126,6 +126,7 @@ function LowStockPage() {
               { header: "Item", sortValue: (item) => item.name, width: "minmax(12rem,1.4fr)", cell: itemName },
               {
                 header: "Tool type",
+                filter: "select",
                 sortValue: (item) => typeName(item.typeId),
                 width: "minmax(8rem,0.8fr)",
                 cell: (item) => (

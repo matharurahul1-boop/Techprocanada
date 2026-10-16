@@ -35,7 +35,7 @@ begin
   if exists (select 1 from legacy.mii_job_number where status is not null and status not in (1, 2, 3, 5, 6, 7, 8)) then
     raise exception 'legacy.mii_job_number has a status number with no mapping below.';
   end if;
-  if exists (select 1 from legacy.mii_orders_details where order_status is not null and order_status not in (1, 2, 5, 7)) then
+  if exists (select 1 from legacy.mii_orders_details where order_status is not null and order_status not in (1, 2, 5, 6, 7, 8)) then
     raise exception 'legacy.mii_orders_details has an order_status number with no mapping below.';
   end if;
 end $$;
@@ -127,11 +127,14 @@ select
   coalesce(nullif(btrim(d.drawing_name), ''), legacy.plain_text(d.description)),
   coalesce(d.qty, 0),
   coalesce(d.qty_completed, 0),
+  -- The old system's drawing status codes (they differ from the job codes).
   case d.order_status
+    when 1 then 'In Progress'
     when 2 then 'Completed'
-    when 5 then 'In Progress'
+    when 6 then 'Mistake'
     when 7 then 'Shipped'
-    else 'Not Started' -- 1, or no status
+    when 8 then 'Requires Attention'
+    else 'Not Started' -- 5, or no status
   end,
   coalesce(d.completed, false),
   d.completed_date,

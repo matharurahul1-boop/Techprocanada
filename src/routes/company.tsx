@@ -240,6 +240,7 @@ function CompanyPage() {
           </div>
 
           <DataList
+            searchable
             rows={companies}
             pagination={{
               page,
@@ -262,6 +263,8 @@ function CompanyPage() {
               },
               {
                 header: "Priority",
+                filter: "select",
+                filterValue: (r) => r.priority,
                 sortValue: (company) =>
                   ["Low", "Modest", "High"].indexOf(company.priority ?? "Low"),
                 width: "6rem",

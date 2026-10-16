@@ -14,6 +14,7 @@ import {
   FileText,
   FileCheck2,
   FilePlus2,
+  ChartColumn,
   Hourglass,
   LayoutDashboard,
   Layers,
@@ -79,6 +80,7 @@ const navItems = [
   { to: "/quoted-hours", long: "Quoted Hours", short: "Quotes", icon: Hourglass },
   { to: "/inspections", long: "Inspections", short: "Inspections", icon: FileCheck2 },
   { to: "/jobs-new", long: "Jobs New", short: "Jobs New", icon: FilePlus2 },
+  { to: "/variance-report", long: "Efficiency Analysis", short: "Efficiency", icon: ChartColumn },
 ] as const;
 
 // These live inside the collapsible "Tools" group in the desktop sidebar.
@@ -93,6 +95,7 @@ const JOB_GROUP_PATHS = new Set<string>([
   "/quoted-hours",
   "/inspections",
   "/jobs-new",
+  "/variance-report",
 ]);
 
 // Job submenu items — add future child routes here.
@@ -104,29 +107,21 @@ const jobItems = [
   { to: "/quoted-hours", long: "Quoted Hours", short: "Quotes", icon: Hourglass },
   { to: "/inspections", long: "Inspections", short: "Inspections", icon: FileCheck2 },
   { to: "/jobs-new", long: "Jobs New", short: "Jobs New", icon: FilePlus2 },
+  { to: "/variance-report", long: "Efficiency Analysis", short: "Efficiency", icon: ChartColumn },
 ] as const;
 
+// Install App always comes last, below the Job group (desktop sidebar and mobile More menu).
+const INSTALL_PATH = "/install-app";
+const installItem = navItems.find((item) => item.to === INSTALL_PATH);
+
 const mobileDockItems = [navItems[0], navItems[1], navItems[5], navItems[8]] as const;
-const mobileMoreItems = [
-  navItems[2],
-  navItems[3],
-  navItems[4],
-  navItems[6],
-  navItems[7],
-  navItems[9],
-  navItems[10],
-  navItems[11],
-  navItems[12],
-  navItems[13],
-  navItems[14],
-  navItems[15],
-  navItems[16],
-  navItems[17],
-  navItems[18],
-  navItems[19],
-  navItems[20],
-  navItems[21],
-] as const;
+const mobileDockPaths = new Set<string>(mobileDockItems.map((item) => item.to));
+// The mobile More menu: everything not on the dock, except the Job group (shown as its
+// own dropdown) and Install App (shown last).
+const mobileMoreItems = navItems.filter(
+  (item) =>
+    !mobileDockPaths.has(item.to) && !JOB_GROUP_PATHS.has(item.to) && item.to !== INSTALL_PATH,
+);
 
 export function Shell({
   eyebrow,
@@ -147,10 +142,15 @@ export function Shell({
   const { user, signOut } = useAuth();
   const push = usePushNotifications();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const isMoreActive = mobileMoreItems.some((item) => pathname === item.to);
   const isToolsGroupActive = TOOLS_GROUP_PATHS.has(pathname);
   // "/job/<id>" is the job details page.
   const isJobGroupActive = JOB_GROUP_PATHS.has(pathname) || pathname.startsWith("/job/");
+  const isMoreActive =
+    mobileMoreItems.some((item) => pathname === item.to) ||
+    isJobGroupActive ||
+    pathname === INSTALL_PATH;
+  // The Job dropdown inside the mobile More menu; open while on one of its pages.
+  const [isMobileJobOpen, setIsMobileJobOpen] = useState(isJobGroupActive);
   const unreadCount = notifications.filter((notification) => !notification.read).length;
 
   useEffect(() => {
@@ -276,8 +276,9 @@ export function Shell({
                     );
                   }
 
-                  // Skip items that belong to the Job group — rendered separately below
-                  if (JOB_GROUP_PATHS.has(item.to)) return null;
+                  // Skip items that belong to the Job group, and Install App — both are
+                  // rendered separately below, in that order.
+                  if (JOB_GROUP_PATHS.has(item.to) || item.to === INSTALL_PATH) return null;
 
                   const Icon = item.icon;
                   return (
@@ -341,6 +342,22 @@ export function Shell({
                   </div>
                 )}
               </div>
+
+              {/* Install App, last in the menu */}
+              {installItem && (
+                <Link
+                  to={installItem.to}
+                  className={`flex min-w-0 flex-none flex-row items-center justify-center rounded-xl border border-transparent py-2.5 text-sm font-medium text-muted-fg transition hover:border-glass-border hover:bg-panel/70 hover:text-ink ${isMenuExpanded ? "justify-start gap-3 px-3 text-left" : "px-2"}`}
+                  activeProps={{
+                    className:
+                      "brand-gradient border-glass-border text-accent-brand-ink font-semibold shadow-lg shadow-accent-brand/30",
+                  }}
+                  title={!isMenuExpanded ? installItem.long : undefined}
+                >
+                  <installItem.icon className="size-4 shrink-0" strokeWidth={1.9} aria-hidden="true" />
+                  <span className={isMenuExpanded ? "inline" : "hidden"}>{installItem.long}</span>
+                </Link>
+              )}
             </nav>
 
 
@@ -585,6 +602,54 @@ export function Shell({
                     </DropdownMenuItem>
                   );
                 })}
+
+                {/* Job dropdown: its tables open and close in place, keeping the menu open. */}
+                <button
+                  type="button"
+                  onClick={() => setIsMobileJobOpen((open) => !open)}
+                  aria-expanded={isMobileJobOpen}
+                  className={`flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium transition hover:bg-accent-brand/10 ${isJobGroupActive ? "text-accent-brand" : "text-ink"}`}
+                >
+                  <Briefcase className="size-4 shrink-0" aria-hidden="true" />
+                  <span className="flex-1 text-left">Job</span>
+                  <ChevronDown
+                    className={`size-3.5 shrink-0 transition-transform ${isMobileJobOpen ? "rotate-180" : ""}`}
+                    aria-hidden="true"
+                  />
+                </button>
+                {isMobileJobOpen && (
+                  <div className="ml-5 flex flex-col gap-0.5 border-l border-line/60 pl-2">
+                    {jobItems.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <DropdownMenuItem key={item.to} asChild>
+                          <Link
+                            to={item.to}
+                            className="flex min-h-10 cursor-pointer items-center gap-3 rounded-lg px-3 font-medium text-ink focus:bg-accent-brand/10"
+                            activeProps={{ className: "bg-accent-brand/10 text-accent-brand" }}
+                          >
+                            <Icon aria-hidden="true" />
+                            {item.long}
+                          </Link>
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Install App, last */}
+                {installItem && (
+                  <DropdownMenuItem asChild>
+                    <Link
+                      to={installItem.to}
+                      className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-3 font-medium text-ink focus:bg-accent-brand/10"
+                      activeProps={{ className: "bg-accent-brand/10 text-accent-brand" }}
+                    >
+                      <installItem.icon aria-hidden="true" />
+                      {installItem.long}
+                    </Link>
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </nav>

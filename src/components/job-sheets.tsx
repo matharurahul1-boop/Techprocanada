@@ -19,6 +19,7 @@ import {
   updateMiiOrderDetail,
   uploadInspectionDocument,
   uploadPackingSlip,
+  actualMinutesFor,
   useStore,
   type Inspection,
   type Job,
@@ -438,7 +439,7 @@ export function OrderDetailFormBody({
   onAdded,
   submitLabel,
 }: OrderDetailSheetProps & FormExtras) {
-  const { jobs } = useStore();
+  const { jobs, machiningHours } = useStore();
   const editId = editing?.id ?? null;
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState<OrderDetailForm>(() => {
@@ -455,18 +456,15 @@ export function OrderDetailFormBody({
   const [hoursError, setHoursError] = useState("");
 
   const formQuoted = parseDuration(form.quotedHours);
-  const formActual = parseDuration(form.actualHours);
-  const formVariance =
-    Number.isNaN(formQuoted) || Number.isNaN(formActual)
-      ? null
-      : varianceOf(formQuoted, formActual);
+  const formActual = actualMinutesFor(form.jobId, form.drawingNumber.trim(), machiningHours);
+  const formVariance = Number.isNaN(formQuoted) ? null : varianceOf(formQuoted, formActual);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (busy) return;
     const quotedMinutes = parseDuration(form.quotedHours);
-    const actualMinutes = parseDuration(form.actualHours);
-    if (Number.isNaN(quotedMinutes) || Number.isNaN(actualMinutes)) {
+    const actualMinutes = formActual;
+    if (Number.isNaN(quotedMinutes)) {
       setHoursError("Enter hours as h:mm (e.g. 12:30) or decimal hours (e.g. 12.5).");
       return;
     }
@@ -673,22 +671,19 @@ export function OrderDetailFormBody({
           />
         </div>
         <div>
-          <label className={labelClass} htmlFor="mii-actual">
-            Actual hours
-          </label>
-          <input
-            id="mii-actual"
-            value={form.actualHours}
-            onChange={(event) => setForm({ ...form, actualHours: event.target.value })}
-            placeholder="h:mm"
-            className={`${fieldClass} font-mono`}
-          />
+          <p className={labelClass}>Actual hours</p>
+          <p
+            className={`${fieldClass} flex items-center font-mono`}
+            title="Sum of the machining hours logged for this job and drawing"
+          >
+            {formatDuration(formActual)}
+          </p>
         </div>
       </div>
       <p className={`mb-4 text-[11px] ${hoursError ? "text-destructive" : "text-muted-fg"}`}>
         {hoursError || (
           <>
-            Variance (actual − quoted):{" "}
+            Actual = machining hours logged · Variance (quoted − actual):{" "}
             <span className={`font-mono font-semibold ${varianceTone(formVariance)}`}>
               {formatVariance(formVariance)}
             </span>

@@ -296,6 +296,7 @@ export function ToolAssignedLogPage({
               },
               {
                 header: "Tool type",
+                filter: "select",
                 sortValue: (row) => row.toolType,
                 width: "minmax(7rem,0.7fr)",
                 cell: (row) => <span className="block truncate text-[12px] text-muted-fg">{row.toolType}</span>,
@@ -322,6 +323,7 @@ export function ToolAssignedLogPage({
               },
               {
                 header: "Issued to",
+                filter: "select",
                 sortValue: (row) => row.recipientName,
                 width: "minmax(8rem,0.8fr)",
                 cell: (row) => (
@@ -335,6 +337,7 @@ export function ToolAssignedLogPage({
               },
               {
                 header: "Location / Machine",
+                filter: "select",
                 sortValue: (row) => [row.location, row.machineName].filter(Boolean).join(" "),
                 width: "minmax(8rem,0.8fr)",
                 cell: (row) => (

@@ -120,6 +120,15 @@ function FillAmountPage() {
     return year && month && day ? `${day}/${month}/${year}` : value;
   };
 
+  // Missing prices follow what the table shows: its own filters, search and dropdowns.
+  const [shownIds, setShownIds] = useState<Set<string> | null>(null);
+  const missingPrices = missingPriceRows(
+    shownIds ? orders.filter((order) => shownIds.has(order.id)) : orders,
+    items,
+    brands,
+    toolTypes,
+  );
+
   return (
     <Shell eyebrow="Procurement" title="Fill Amount">
       <div className="animate-rise space-y-5 px-5 py-6 lg:px-8 lg:py-8">
@@ -174,11 +183,11 @@ function FillAmountPage() {
               <h2 className="font-display text-base font-semibold">Orders</h2>
               <button
               type="button"
-              onClick={() => printMissingPricesForm(missingPriceRows(orders, items, brands, toolTypes))}
+              onClick={() => printMissingPricesForm(missingPrices)}
               className="inline-flex h-9 items-center gap-2 rounded-xl bg-chip px-3 text-[12px] font-semibold text-ink transition hover:bg-accent-brand hover:text-accent-brand-ink"
               title="Print a form listing every tool whose orders have no price"
             >
-              <Printer size={14} /> Missing prices form ({missingPriceRows(orders, items, brands, toolTypes).length})
+              <Printer size={14} /> Missing prices form ({missingPrices.length})
             </button>
             </div>
             <div className="flex gap-1.5">
@@ -203,6 +212,8 @@ function FillAmountPage() {
           </div>
 
           <DataList
+            onResultsChange={(shown) => setShownIds(new Set(shown.map((row) => row.id)))}
+            searchable
             rows={rows}
             pagination={{ page, onPageChange: setPage, pageSize: PAGE_SIZE, itemLabel: "orders" }}
             rowKey={(row) => row.id}
@@ -218,6 +229,7 @@ function FillAmountPage() {
               },
               {
                 header: "Brand",
+                filter: "select",
                 sortValue: (row) => brandById.get(row.brandId) ?? "",
                 width: "minmax(7rem,0.8fr)",
                 cell: (row) => (

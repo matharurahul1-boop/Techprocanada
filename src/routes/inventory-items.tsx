@@ -25,6 +25,7 @@ import {
   updateItem,
   useStore,
   type InventoryItem,
+  uploadOrderDocument,
 } from "@/lib/store";
 
 export const Route = createFileRoute("/inventory-items")({
@@ -76,6 +77,7 @@ function InventoryItemsPage() {
   const [orderQty, setOrderQty] = useState("");
   const [amount, setAmount] = useState("");
   const [documentName, setDocumentName] = useState("");
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [name, setName] = useState("");
   const [typeId, setTypeId] = useState("");
   const [returnable, setReturnable] = useState<"Returnable" | "Consumable">("Returnable");
@@ -181,23 +183,28 @@ function InventoryItemsPage() {
     setOrderQty("");
     setAmount("");
     setDocumentName("");
+    setDocumentFile(null);
   };
 
-  const submitOrder = (e: React.FormEvent) => {
+  const submitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!orderItemId || !selectedBrand || !purchaseDate) return;
+    // The document is uploaded so it can be opened later; the order keeps its path.
+    const storedPath = documentFile ? await uploadOrderDocument(documentFile) : null;
     addOrder({
       itemId: orderItemId,
       purchaseDate,
       brandId: selectedBrand,
       qtyOrdered: Number(orderQty) || 0,
-      amount: Number(amount) || 0,
-      documentName,
+      // Total = unit price × quantity.
+      amount: Math.round((Number(orderQty) || 0) * (Number(amount) || 0) * 100) / 100,
+      documentName: storedPath ?? "",
     });
     setPurchaseDate("");
     setOrderQty("");
     setAmount("");
     setDocumentName("");
+    setDocumentFile(null);
   };
 
   const assignItem = items.find((i) => i.id === assignItemId) ?? null;
@@ -640,7 +647,7 @@ function InventoryItemsPage() {
             </div>
             <div>
               <label className={labelClass} htmlFor="order-amount">
-                Amount
+                Unit price
               </label>
               <input
                 id="order-amount"
@@ -654,6 +661,12 @@ function InventoryItemsPage() {
               />
             </div>
           </div>
+          <p className="-mt-2 mb-4 text-[11px] text-muted-fg">
+            Total (unit price × qty):{" "}
+            <span className="font-mono font-semibold text-ink">
+              {(Math.round((Number(orderQty) || 0) * (Number(amount) || 0) * 100) / 100).toFixed(2)}
+            </span>
+          </p>
 
           <label className={labelClass} htmlFor="order-doc">
             Document
@@ -661,7 +674,11 @@ function InventoryItemsPage() {
           <input
             id="order-doc"
             type="file"
-            onChange={(e) => setDocumentName(e.target.files?.[0]?.name ?? "")}
+            onChange={(e) => {
+              const file = e.target.files?.[0] ?? null;
+              setDocumentFile(file);
+              setDocumentName(file?.name ?? "");
+            }}
             className="mb-1 w-full rounded-xl bg-panel px-3 py-2.5 text-sm ring-1 ring-line file:mr-3 file:rounded-lg file:border-0 file:bg-chip file:px-3 file:py-1.5 file:text-[12px] file:font-semibold"
           />
           <p className="mb-5 text-[11px] text-muted-fg">
