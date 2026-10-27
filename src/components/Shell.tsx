@@ -1,5 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
+  Gift,
   Briefcase,
   Building2,
   Bell,
@@ -42,6 +43,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import techProLogo from "@/assets/techpro-logo.png";
+import { ReferButton, useReferralUrl } from "@/components/ReferButton";
 import { clearNotifications, markNotificationsRead, useStore } from "@/lib/store";
 import { useAuth } from "@/hooks/use-auth";
 import { usePushNotifications } from "@/hooks/use-push";
@@ -141,6 +143,7 @@ export function Shell({
   const { notifications } = useStore();
   const { user, signOut } = useAuth();
   const push = usePushNotifications();
+  const referralUrl = useReferralUrl();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const isToolsGroupActive = TOOLS_GROUP_PATHS.has(pathname);
   // "/job/<id>" is the job details page.
@@ -362,9 +365,14 @@ export function Shell({
 
 
             <div
-              className={`mt-auto hidden border-t border-line/60 py-4 lg:block ${isMenuExpanded ? "px-5" : "px-2 text-center"}`}
+              className={`mt-auto hidden border-t border-line/60 py-4 lg:block ${isMenuExpanded ? "px-3" : "px-2 text-center"}`}
             >
-              <p className="font-mono text-[11px] text-muted-fg">Warehouse · Toronto</p>
+              <ReferButton expanded={isMenuExpanded} />
+              <p
+                className={`mt-3 font-mono text-[11px] text-muted-fg ${isMenuExpanded ? "px-2" : ""}`}
+              >
+                {isMenuExpanded ? "Warehouse · Toronto" : "TO"}
+              </p>
             </div>
           </aside>
 
@@ -380,6 +388,18 @@ export function Shell({
                   </h1>
                 </div>
                 <div className="flex shrink-0 items-center gap-2 text-sm sm:gap-3">
+                  {/* The Refer button lives at the bottom of the sidebar; the sidebar is
+                      hidden below lg, so phones and tablets get this gift icon instead. */}
+                  <a
+                    href={referralUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Refer and earn (opens the referral app in a new tab)"
+                    title="Refer & earn"
+                    className="brand-gradient grid size-9 place-items-center rounded-full text-accent-brand-ink shadow-lg shadow-accent-brand/30 ring-1 ring-white/15 transition hover:brightness-110 lg:hidden"
+                  >
+                    <Gift size={16} aria-hidden="true" />
+                  </a>
                   <DropdownMenu onOpenChange={(open) => open && markNotificationsRead()}>
                     <DropdownMenuTrigger asChild>
                       <Button

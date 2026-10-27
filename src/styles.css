@@ -319,3 +319,107 @@ select option {
   }
 }
 
+
+/* Refer button hover (see ReferButton.tsx): a light sheen sweeps across, the gift hops
+   and three small sparkles twinkle around it. Short and subtle: about 0.7s in all. */
+
+/* The sheen: a soft diagonal highlight that slides from left to right once. */
+.refer-button::after {
+  content: "";
+  position: absolute;
+  inset: -20% auto -20% -60%;
+  z-index: -1;
+  width: 45%;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgb(255 255 255 / 0.32) 50%,
+    transparent 100%
+  );
+  transform: translateX(0) skewX(-18deg);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.refer-button:hover::after,
+.refer-button:focus-visible::after {
+  animation: refer-sheen 650ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes refer-sheen {
+  0% {
+    opacity: 0;
+    transform: translateX(0) skewX(-18deg);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(420%) skewX(-18deg);
+  }
+}
+
+/* The gift: a small hop with a slight tilt, settling back. */
+.refer-button:hover .refer-gift,
+.refer-button:focus-visible .refer-gift {
+  animation: refer-gift-hop 520ms cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+@keyframes refer-gift-hop {
+  0% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+  40% {
+    transform: translateY(-3px) rotate(-10deg) scale(1.1);
+  }
+  100% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+}
+
+/* The sparkles: four-point stars that grow, turn a little and fade. */
+.refer-sparkle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--sparkle-size);
+  height: var(--sparkle-size);
+  margin: calc(var(--sparkle-size) / -2) 0 0 calc(var(--sparkle-size) / -2);
+  background: #fff7d6;
+  clip-path: polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%);
+  filter: drop-shadow(0 0 2px rgb(255 230 150 / 0.9));
+  opacity: 0;
+  transform: translate(var(--sparkle-x), var(--sparkle-y)) scale(0);
+}
+
+.refer-button:hover .refer-sparkle,
+.refer-button:focus-visible .refer-sparkle {
+  animation: refer-twinkle 600ms ease-out var(--sparkle-delay) both;
+}
+
+@keyframes refer-twinkle {
+  0% {
+    opacity: 0;
+    transform: translate(var(--sparkle-x), var(--sparkle-y)) scale(0) rotate(0deg);
+  }
+  45% {
+    opacity: 1;
+    transform: translate(var(--sparkle-x), var(--sparkle-y)) scale(1) rotate(45deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--sparkle-x), var(--sparkle-y)) scale(0.4) rotate(90deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .refer-button:hover::after,
+  .refer-button:focus-visible::after,
+  .refer-button:hover .refer-gift,
+  .refer-button:focus-visible .refer-gift,
+  .refer-button:hover .refer-sparkle,
+  .refer-button:focus-visible .refer-sparkle {
+    animation: none;
+  }
+}
